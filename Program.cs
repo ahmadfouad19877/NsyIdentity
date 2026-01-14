@@ -102,7 +102,7 @@ builder.Services.AddOpenIddict()
     {
         // الـ Issuer (نفس الدومين اللي كنت حاطه في IdentityServer)
         //options.SetIssuer(new Uri("https://users.i-myapp.com"));
-        options.SetIssuer(new Uri("https://localhost:7266"));
+        options.SetIssuer(new Uri("https://nsyuser.i-myapp.com"));
 
         // أنواع الـ Flows اللي بدك تدعمها
         /*
@@ -166,7 +166,7 @@ builder.Services.AddOpenIddict()
     // Validation (تحتاجها لو نفس السيرفر فيه APIs محمية)
     .AddValidation(options =>
     {
-        options.SetIssuer("https://localhost:7266");
+        options.SetIssuer("https://nsyuser.i-myapp.com");
         options.UseLocalServer();   // يتحقق من التوكنات الصادرة من نفس السيرفر
         options.UseAspNetCore();    // يربط مع [Authorize]
     });
@@ -227,7 +227,7 @@ builder.Services.AddApiVersioning(options =>
 });
 if (Environment.GetEnvironmentVariable("IS_DOCKER") == "true")
 {
-    builder.WebHost.UseUrls("http://0.0.0.0:5001");
+    builder.WebHost.UseUrls("http://0.0.0.0:5015");
 }
 builder.WebHost.ConfigureKestrel(options =>
 {
