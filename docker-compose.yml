@@ -12,6 +12,7 @@ services:
       - DB_CONNECTION_FILE=/run/secrets/db_connection
       - ASPNETCORE_ENVIRONMENT=Production
       - IS_DOCKER=true
+      - ASPNETCORE_URLS=http://+:5015
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.nsyidentity.rule=Host(`nsyuser.i-myapp.com`)"
