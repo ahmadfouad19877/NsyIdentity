@@ -1,0 +1,49 @@
+services:
+
+  # ------------------------
+  # تطبيقاتك الأساسية
+  # ------------------------
+
+  nsyidentity:
+    build:
+      context: .
+    container_name: nsyidentity
+    environment:
+      - DB_CONNECTION_FILE=/run/secrets/db_connection
+      - ASPNETCORE_ENVIRONMENT=Production
+      - IS_DOCKER=true
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.nsyidentity.rule=Host(`nsyuser.i-myapp.com`)"
+      - "traefik.http.routers.nsyidentity.entrypoints=websecure"
+      - "traefik.http.routers.nsyidentity.tls.certresolver=myresolver"
+      - "traefik.http.services.nsyidentity.loadbalancer.server.port=5015"
+      - "traefik.http.middlewares.nsyidentity-headers.headers.customrequestheaders.X-Forwarded-Proto=https"
+      - "traefik.http.routers.nsyidentity.middlewares=nsyidentity-headers"
+    networks:
+      - NSY_network
+    restart: always
+
+  # ------------------------
+  # خدمات المايجريشن (dotnet ef database update)
+  # ------------------------
+
+  migrator-nsyidentity:
+    image: mcr.microsoft.com/dotnet/sdk:10.0
+    container_name: migrator-nsyidentity
+    working_dir: /src
+    volumes:
+      - ./:/src
+    command: /bin/sh -c "dotnet tool install --global dotnet-ef && export PATH=\"$PATH:/root/.dotnet/tools\" && dotnet ef database update"
+    environment:
+      - DB_CONNECTION=Server=167.235.239.191,1433;Database=ALSULTANPROJECT_IdentityServer_db;User Id=sa;Password=S@1112131415;TrustServerCertificate=True;
+    networks:
+      - NSY_network
+
+networks:
+  NSY_network:
+    external: true
+
+
+
+#Server=161.97.185.223

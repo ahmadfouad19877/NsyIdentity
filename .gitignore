@@ -1,0 +1,17 @@
+obj/
+bin/
+logs/
+.vs/
+.idea/
+*.user
+*.swp
+.env
+*.env
+*.lock.json
+*.log
+*.DS_Store
+.DS_Store
+*.db
+TestResults/
+coverage/
+publish/
