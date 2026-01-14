@@ -53,6 +53,9 @@ networks:
   NSY_network:
     external: true
 
+secrets:
+  db_connection:
+    file: ./secrets/db_connection.txt
 
 
 #Server=161.97.185.223
