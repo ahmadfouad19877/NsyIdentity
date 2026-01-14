@@ -43,11 +43,12 @@ services:
       export DB_CONNECTION=$(cat /run/secrets/db_connection) &&
       dotnet tool install --global dotnet-ef &&
       export PATH=\"$PATH:/root/.dotnet/tools\" &&
-      dotnet restore /src/IdentityServerNSY/IdentityServerNSY.csproj &&
-      dotnet ef database update --project /src/IdentityServerNSY/IdentityServerNSY.csproj --startup-project /src/IdentityServerNSY/IdentityServerNSY.csproj
+      dotnet restore /src/IdentityServerNSY.csproj &&
+      dotnet ef database update --project /src/IdentityServerNSY.csproj --startup-project /src/IdentityServerNSY.csproj
       "
     networks:
       - NSY_network
+
 
 networks:
   NSY_network:
