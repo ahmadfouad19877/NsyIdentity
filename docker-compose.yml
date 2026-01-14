@@ -34,9 +34,18 @@ services:
     working_dir: /src
     volumes:
       - ./:/src
-    command: /bin/sh -c "dotnet tool install --global dotnet-ef && export PATH=\"$PATH:/root/.dotnet/tools\" && dotnet ef database update"
+    secrets:
+      - db_connection
     environment:
-      - DB_CONNECTION=Server=167.235.239.191,1433;Database=ALSULTANPROJECT_IdentityServer_db;User Id=sa;Password=S@1112131415;TrustServerCertificate=True;
+      - DB_CONNECTION_FILE=/run/secrets/db_connection
+    command: >
+      /bin/sh -c "
+      export DB_CONNECTION=$(cat /run/secrets/db_connection) &&
+      dotnet tool install --global dotnet-ef &&
+      export PATH=\"$PATH:/root/.dotnet/tools\" &&
+      dotnet restore /src/IdentityServerNSY/IdentityServerNSY.csproj &&
+      dotnet ef database update --project /src/IdentityServerNSY/IdentityServerNSY.csproj --startup-project /src/IdentityServerNSY/IdentityServerNSY.csproj
+      "
     networks:
       - NSY_network
 
