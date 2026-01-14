@@ -36,16 +36,17 @@ builder.Services.AddCors(options =>
         builder.SetIsOriginAllowed(isOriginAllowed: _ => true).AllowAnyHeader().AllowAnyMethod().AllowCredentials();
     });
 });
-string? connectionString = Environment.GetEnvironmentVariable("DB_CONNECTION");
+// 1) حاول من Environment مباشرة (اختياري)
+var connectionString = Environment.GetEnvironmentVariable("DB_CONNECTION");
 
-// أولوية أعلى: Docker Secret file
+// 2) أولوية أعلى: Docker Secret file
 var connectionFile = Environment.GetEnvironmentVariable("DB_CONNECTION_FILE");
 if (!string.IsNullOrWhiteSpace(connectionFile) && File.Exists(connectionFile))
 {
     connectionString = File.ReadAllText(connectionFile, Encoding.UTF8).Trim();
 }
 
-// fallback أخير من appsettings.json
+// 3) fallback من appsettings (مثلاً للتشغيل المحلي)
 if (string.IsNullOrWhiteSpace(connectionString))
 {
     connectionString = builder.Configuration.GetConnectionString("MyConnection");
@@ -53,11 +54,12 @@ if (string.IsNullOrWhiteSpace(connectionString))
 
 if (string.IsNullOrWhiteSpace(connectionString))
 {
-    throw new InvalidOperationException("Database connection string is missing.");
+    throw new InvalidOperationException("DB connection string is missing.");
 }
 
 builder.Services.AddDbContext<ApplicationDb>(options =>
     options.UseSqlServer(connectionString));
+
 //builder.Services.AddDbContext<ApplicationDb>(option => option.UseSqlServer(builder.Configuration.GetConnectionString("MyConnection")));
 builder.Services.AddIdentity<ApplicationUser, ApplicationRole>(options =>
 {
