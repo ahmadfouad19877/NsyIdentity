@@ -14,27 +14,27 @@ public static class OpenIddictClientsSeedServer
         var userManager = scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
         var db = scope.ServiceProvider.GetRequiredService<ApplicationDb>();
         var app= await manager.FindByClientIdAsync("PostmanLocal");
-        var client = await manager.GetClientIdAsync(app);
         
-        Console.WriteLine(client);
-        
-        if (client is null)
+        if (app is null)
         {
-            
-            await EnsureClient(manager,
-                clientId: "PostmanLocal",
-                displayName: "Postman Local",
-                redirectUri: "https://localhost:7266/cb"
-            );
-            var user = await userManager.FindByNameAsync("superadmin");
-            var allow = new ApplicationUserAllowedClient
+            var client = await manager.GetClientIdAsync(app);
+            if (client != null)
             {
-                UserId = user!.Id,
-                ClientId = "PostmanLocal",
-                IsEnabled = true,
-            };
-            db.AllowedClients.Add(allow);
-            await db.SaveChangesAsync();
+                await EnsureClient(manager,
+                    clientId: "PostmanLocal",
+                    displayName: "Postman Local",
+                    redirectUri: "https://nsyuser.i-myapp.com/cb"
+                );
+                var user = await userManager.FindByNameAsync("superadmin");
+                var allow = new ApplicationUserAllowedClient
+                {
+                    UserId = user!.Id,
+                    ClientId = "PostmanLocal",
+                    IsEnabled = true,
+                };
+                db.AllowedClients.Add(allow);
+                await db.SaveChangesAsync();
+            }
         }
 
         
