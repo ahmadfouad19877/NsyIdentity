@@ -7,12 +7,15 @@ services:
   nsyidentity:
     build:
       context: .
+      dockerfile: Dockerfile
     container_name: nsyidentity
     environment:
       - DB_CONNECTION_FILE=/run/secrets/db_connection
       - ASPNETCORE_ENVIRONMENT=Production
       - IS_DOCKER=true
       - ASPNETCORE_URLS=http://+:5015
+    secrets:
+      - db_connection
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.nsyidentity.rule=Host(`nsyuser.i-myapp.com`)"
@@ -50,14 +53,14 @@ services:
     networks:
       - NSY_network
 
-
+secrets:
+  db_connection:
+    file: ./secrets/db_connection.txt
 networks:
   NSY_network:
     external: true
 
-secrets:
-  db_connection:
-    file: ./secrets/db_connection.txt
+
 
 
 #Server=161.97.185.223
