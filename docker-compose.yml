@@ -22,8 +22,7 @@ services:
       - "traefik.http.routers.nsyidentity.entrypoints=websecure"
       - "traefik.http.routers.nsyidentity.tls.certresolver=myresolver"
       - "traefik.http.services.nsyidentity.loadbalancer.server.port=5015"
-      - "traefik.http.middlewares.nsyidentity-headers.headers.customrequestheaders.X-Forwarded-Proto=https"
-      - "traefik.http.routers.nsyidentity.middlewares=nsyidentity-headers"
+      - "traefik.http.middlewares.nsyidentity-headers.headers.customrequestheaders.X-Forwarded-Host=nsyuser.i-myapp.com"
     networks:
       - NSY_network
     restart: always

@@ -238,12 +238,18 @@ builder.WebHost.ConfigureKestrel(options =>
 });
 builder.Services.AddDistributedMemoryCache();
 builder.Services.AddSession(); 
+var forwardedHeadersOptions = new ForwardedHeadersOptions
+{
+    ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto | ForwardedHeaders.XForwardedHost
+};
+forwardedHeadersOptions.KnownNetworks.Clear();
+forwardedHeadersOptions.KnownProxies.Clear();
 var app = builder.Build();
 
 app.UseHttpsRedirection();
 app.UseStaticFiles();
 app.UseRouting();
-
+app.UseForwardedHeaders(forwardedHeadersOptions);
 app.UseCors(MyAllowSpecificOrigins);
 
 app.UseSession();
