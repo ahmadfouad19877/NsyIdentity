@@ -17,6 +17,8 @@ public class ApplicationUserAllowedClient
 
     public bool IsEnabled { get; set; } = true;
     
+    public List<string> AllowedAudiences { get; set; } = new();
+    
     
     public DateTime CreatedAt { get; set; } = DateTime.Now;
 }

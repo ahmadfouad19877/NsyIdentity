@@ -35,6 +35,7 @@ public class UserAllowedClientRep:IUserAllowedClientRep
             {
                 UserId = user.Id,
                 ClientId = allowedClient.ClientId,
+                AllowedAudiences = allowedClient.AllowedAudiences,
                 IsEnabled = true,
             };
             _db.AllowedClients.Add(allow);
@@ -71,6 +72,23 @@ public class UserAllowedClientRep:IUserAllowedClientRep
             Console.WriteLine(e);
             throw;
         }
+    }
+
+    public async Task<IdentityResult> UpdateUserAudiences(ApplicationUserAllowedAudiencesView allowedAudiences)
+    {
+        var allow = await _db.AllowedClients.FindAsync(allowedAudiences.Id);
+        if (!allowedAudiences.OldAudiences.Equals(null)&&!allow.AllowedAudiences.Contains(allowedAudiences.Audiences))
+        {
+            allow.AllowedAudiences.Remove(allowedAudiences.OldAudiences);
+            allow.AllowedAudiences.Add(allowedAudiences.Audiences);
+        }
+        if (allow.AllowedAudiences.Contains(allowedAudiences.Audiences)&&allowedAudiences.OldAudiences.Equals(null))
+        {
+            throw new ArgumentException("this Audiences is Add Befoor.", nameof(allowedAudiences.Audiences));
+        }
+        allow.AllowedAudiences.Add(allowedAudiences.Audiences);
+        await _db.SaveChangesAsync();
+        return IdentityResult.Success;
     }
 
     public async Task<IdentityResult> DeleteUserToClient(Guid ID)

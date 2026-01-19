@@ -18,8 +18,8 @@ namespace IdentityServerNSY.API
             _clientIdRep = clientIdRep;
         }
         [HttpPost]
-        [Route("AddClientId")]
-        public async Task<IActionResult> AddClientId(ApplicationAddClientIdView model)
+        [Route("AddClient")]
+        public async Task<IActionResult> AddClient(ApplicationClientIdView model)
         {
             try
             {
@@ -48,8 +48,38 @@ namespace IdentityServerNSY.API
         }
         
         [HttpPost]
+        [Route("AddServer")]
+        public async Task<IActionResult> AddServer(ApplicationServerClientIdView model)
+        {
+            try
+            {
+                var data = await _clientIdRep.AddServer(model);
+                if (data.Succeeded)
+                {
+                    return StatusCode(200, new
+                    {
+                        status = true
+                    });
+                }
+                return StatusCode(402, new
+                {
+                    status = false,
+                    data.Errors
+                }); 
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new
+                {
+                    status = false,
+                    result = ex.ToString()
+                });
+            }
+        }
+        
+        [HttpPost]
         [Route("EditeClientId")]
-        public async Task<IActionResult> EditeClient(ApplicationAddClientIdView model)
+        public async Task<IActionResult> EditeClient(ApplicationClientIdView model)
         {
             try
             {

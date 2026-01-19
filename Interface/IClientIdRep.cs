@@ -6,9 +6,11 @@ namespace IdentityServer.Interface;
 
 public interface IClientIdRep
 {
-    Task<IdentityResult> AddClient(ApplicationAddClientIdView allowedClient);
+    Task<IdentityResult> AddClient(ApplicationClientIdView allowedClient);
     
-    Task<IdentityResult> EditeClient(ApplicationAddClientIdView allowedClient);
+    Task<IdentityResult> AddServer(ApplicationServerClientIdView allowedClient);
+    
+    Task<IdentityResult> EditeClient(ApplicationClientIdView allowedClient);
     
     Task<IdentityResult> DeleteClient(string clientId);
     

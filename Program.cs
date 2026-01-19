@@ -1,23 +1,18 @@
-﻿using System.Security.Claims;
+﻿
 using System.Text;
-using IdentityServer;
 using IdentityServer.Interface;
 using IdentityServer.Models;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using IdentityServer.Interface.ImageService;
 using IdentityServer.Middleware;
-using IdentityServer.OpenIddict.Handlers;
 using IdentityServerNSY.account;
 using IdentityServerNSY.Infrastructure.Seed;
-using Microsoft.AspNetCore;
-using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Versioning;
 using OpenIddict.Abstractions;
 using OpenIddict.Server;
-using OpenIddict.Server.AspNetCore;
 using OpenIddict.Validation.AspNetCore;
 var builder = WebApplication.CreateBuilder(args);
 
@@ -101,9 +96,8 @@ builder.Services.AddOpenIddict()
     .AddServer(options =>
     {
         // الـ Issuer (نفس الدومين اللي كنت حاطه في IdentityServer)
-        //options.SetIssuer(new Uri("https://users.i-myapp.com"));
         options.SetIssuer(new Uri("https://nsyuser.i-myapp.com"));
-
+        //options.SetIssuer(new Uri("https://localhost:7266"));
         // أنواع الـ Flows اللي بدك تدعمها
         /*
          * هذا يسمح باستخدام Password Flow
@@ -114,7 +108,7 @@ builder.Services.AddOpenIddict()
         options
             .SetTokenEndpointUris("/connect/token")
             .SetAuthorizationEndpointUris("/connect/authorize")
-            .SetIntrospectionEndpointUris("/connect/intros");
+            .SetIntrospectionEndpointUris("/connect/introspect");
         
         options.AllowAuthorizationCodeFlow()
             .RequireProofKeyForCodeExchange()
@@ -139,7 +133,8 @@ builder.Services.AddOpenIddict()
 
         // ربطه مع ASP.NET Core (يرجع JSON جاهز من الـ endpoints)
         options.UseAspNetCore()
-            .EnableAuthorizationEndpointPassthrough(); 
+            .EnableAuthorizationEndpointPassthrough();
+            //.EnableTokenEndpointPassthrough();
         // احذف EnableTokenEndpointPassthrough
         
         // ✅ يخلي access_token يطلع opaque (reference token)
@@ -158,8 +153,15 @@ builder.Services.AddOpenIddict()
 
         options.AddEventHandler<OpenIddictServerEvents.ProcessSignInContext>(b =>
             b.UseScopedHandler<StoreSessionOnTokenHandler>());
-        options.AddEventHandler<OpenIddictServerEvents.ApplyTokenResponseContext>(builder =>
-            builder.UseScopedHandler<RefreshTokenSessionHandler>());
+        
+        options.AddEventHandler<OpenIddictServerEvents.ValidateIntrospectionRequestContext>(b =>
+            b.UseInlineHandler(ctx =>
+            {
+                Console.WriteLine($"INTROSPECT token: {ctx.Request.Token}");
+                Console.WriteLine($"INTROSPECT client_id: {ctx.Request.ClientId}");
+                return default;
+            }));
+
 
     })
 
@@ -167,6 +169,7 @@ builder.Services.AddOpenIddict()
     .AddValidation(options =>
     {
         options.SetIssuer("https://nsyuser.i-myapp.com");
+        //options.SetIssuer(new Uri("https://localhost:7266"));
         options.UseLocalServer();   // يتحقق من التوكنات الصادرة من نفس السيرفر
         options.UseAspNetCore();    // يربط مع [Authorize]
     });
@@ -215,7 +218,7 @@ builder.Services.AddTransient<IUserAllowedClientRep, UserAllowedClientRep>();
 builder.Services.AddTransient<IUserSessionRep, UserSessionRep>();
 builder.Services.AddTransient<IClientIdRep, ClientIdRep>();
 builder.Services.AddTransient<IImageService, ImageService>();
-builder.Services.AddScoped<MultiSchemeAuthFilter>();
+
 builder.Services.AddApiVersioning(options =>
 {
     options.DefaultApiVersion = new ApiVersion(1, 0); // النسخة الافتراضية v1.0
@@ -255,7 +258,7 @@ app.UseCors(MyAllowSpecificOrigins);
 app.UseSession();
 app.UseAuthentication();
 //لفحص التوكن
-app.Use(async (context, next) =>
+/*app.Use(async (context, next) =>
 {
     Console.WriteLine("MMMMMM");
     Console.WriteLine(context.Response.HttpContext.User.Identity.Name);
@@ -289,7 +292,7 @@ app.Use(async (context, next) =>
     }
 
     await next();
-});
+});*/
 app.UseSessionValidation(opt =>
 {
     opt.DeviceIdHeader = "X-Device-Id";
@@ -327,34 +330,43 @@ app.Run();
 //مكتبة للتحقق
 //OpenIddict.Validation.AspNetCore
 /*
- builder.Services.AddAuthentication(options =>
+ 
+builder.Services.AddAuthentication(options =>
    {
        options.DefaultAuthenticateScheme = OpenIddictValidationAspNetCoreDefaults.AuthenticationScheme;
        options.DefaultChallengeScheme = OpenIddictValidationAspNetCoreDefaults.AuthenticationScheme;
    });
- *using OpenIddict.Validation.AspNetCore;
-   
-   builder.Services.AddAuthentication(options =>
+   builder.Services.AddAuthorization(options =>
    {
-       options.DefaultAuthenticateScheme = OpenIddictValidationAspNetCoreDefaults.AuthenticationScheme;
-       options.DefaultChallengeScheme = OpenIddictValidationAspNetCoreDefaults.AuthenticationScheme;
-   });
-   
-   builder.Services.AddOpenIddict()
-       .AddValidation(options =>
+       options.AddPolicy("SuperAdmin", policy =>
        {
-           options.SetIssuer("https://users.i-myapp.com");
+           Console.WriteLine("EEEE");
+           policy.AddAuthenticationSchemes(OpenIddictValidationAspNetCoreDefaults.AuthenticationScheme);
+           
+           policy.RequireAuthenticatedUser();
    
-           // ✅ هذا هو المهم مع reference/opaque tokens:
-           options.UseIntrospection()
-                  .SetClientId("SultanUrfaAdminApi_Introspector")
-                  .SetClientSecret("PUT_SECRET_HERE");
+           // ✅ تحقق من السكوب سواء كان "scope" أو "scp"
+           policy.RequireAssertion(ctx =>
+           {
+               var scopeValue = ctx.User.FindFirst("scope")?.Value; // "a b c"
+               var scopesFromScope = string.IsNullOrWhiteSpace(scopeValue)
+                   ? Array.Empty<string>()
+                   : scopeValue.Split(' ', StringSplitOptions.RemoveEmptyEntries);
    
-           options.UseSystemNetHttp();
-           options.UseAspNetCore();
+               var scopesFromScp = ctx.User.FindAll("scp").Select(x => x.Value); // claims متعددة
+   
+               return scopesFromScope.Concat(scopesFromScp)
+                   .Contains("local_app_api");
+           });
+   
+           // ✅ بدل client_id استخدم azp (Authorized Party)
+           policy.RequireClaim("azp", "PostmanLocal");
+   
+           // ✅ Roles
+           policy.RequireRole("SuperAdmin");
        });
-   
-   builder.Services.AddAuthorization();
+       
+   });
  *
  *
  * 

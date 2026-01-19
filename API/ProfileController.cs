@@ -12,10 +12,8 @@ namespace IdentityServer.API
 {
     [Route("api")]
     [ApiController]
-    //[Authorize]
+    
     [Authorize]
-    //[Authorize(AuthenticationSchemes = "Bearer")]
-    //[ServiceFilter(typeof(MultiSchemeAuthFilter))]
     public class ProfileController : ControllerBase
     {
         private readonly UserManager<ApplicationUser> _manager;

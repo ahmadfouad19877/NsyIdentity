@@ -18,11 +18,11 @@ public class ClientIdRep: IClientIdRep
         _manager = manager;
         
     }
-    public async Task<IdentityResult> AddClient(ApplicationAddClientIdView allowedClient)
+    public async Task<IdentityResult> AddClient(ApplicationClientIdView allowedClient)
     {
         try
         {
-            await EnsureClient(_manager,
+            await EnsurePublicClient(_manager,
                 clientId: allowedClient.clientId,
                 displayName: allowedClient.displayName,
                 redirectUri: allowedClient.redirectUri,
@@ -38,7 +38,25 @@ public class ClientIdRep: IClientIdRep
         
     }
 
-    public async Task<IdentityResult> EditeClient(ApplicationAddClientIdView allowedClient)
+    public async Task<IdentityResult> AddServer(ApplicationServerClientIdView allowedClient)
+    {
+        try
+        {
+            await EnsureServiceClient(_manager,
+                clientId: allowedClient.clientId,
+                clientSecrit:allowedClient.clientSecrit,
+                displayName:allowedClient.DisplayName
+            );
+            return IdentityResult.Success;
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine(e);
+            throw;
+        }
+    }
+
+    public async Task<IdentityResult> EditeClient(ApplicationClientIdView allowedClient)
     {
         
         try
@@ -174,7 +192,7 @@ public class ClientIdRep: IClientIdRep
         return list;
     }
 
-    private static async Task EnsureClient(
+    private static async Task EnsurePublicClient(
         IOpenIddictApplicationManager manager,
         string clientId,
         string displayName,
@@ -196,6 +214,7 @@ public class ClientIdRep: IClientIdRep
                 // endpoints
                 OpenIddictConstants.Permissions.Endpoints.Authorization,
                 OpenIddictConstants.Permissions.Endpoints.Token,
+                //OpenIddictConstants.Permissions.Endpoints.Introspection,
                 // grant types
                 OpenIddictConstants.Permissions.GrantTypes.AuthorizationCode,
                 OpenIddictConstants.Permissions.GrantTypes.RefreshToken,
@@ -212,6 +231,29 @@ public class ClientIdRep: IClientIdRep
             {
                 OpenIddictConstants.Requirements.Features.ProofKeyForCodeExchange // PKCE
             }
+        });
+    }
+    
+    private static async Task EnsureServiceClient(
+        IOpenIddictApplicationManager manager,
+        string clientId,
+        string clientSecrit,
+        string displayName)
+    {
+        if (await manager.FindByClientIdAsync(clientId) is not null)
+            return;
+
+        await manager.CreateAsync(new OpenIddictApplicationDescriptor
+        {
+            ClientId = clientId,
+            ClientSecret = clientSecrit,
+            DisplayName = displayName,
+            ClientType = OpenIddictConstants.ClientTypes.Confidential,
+            Permissions =
+            {
+                OpenIddictConstants.Permissions.Endpoints.Introspection,
+            },
+            
         });
     }
 }

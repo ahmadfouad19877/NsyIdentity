@@ -10,6 +10,8 @@ public interface IUserAllowedClientRep
     
     Task<IdentityResult> UpdateUserToClient(ApplicationUserAllowedClientView allowedClient);
     
+    Task<IdentityResult> UpdateUserAudiences(ApplicationUserAllowedAudiencesView allowedAudiences);
+    
     Task<IdentityResult> DeleteUserToClient(Guid ID);
     
     Task<IdentityResult> DisableUser(Guid ID);

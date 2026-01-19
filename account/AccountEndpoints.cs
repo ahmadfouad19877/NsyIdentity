@@ -118,7 +118,7 @@ public static class AccountEndpoints
 
             return Results.Ok(new { code });
         }).AllowAnonymous();
-
+        
 
         // =========================
         // GET: /connect/authorize (كما هو عندك)
@@ -235,6 +235,20 @@ public static class AccountEndpoints
             var principal = new ClaimsPrincipal(identity);
 
             principal.SetScopes(request.GetScopes());
+            var allow=await db.AllowedClients.OrderBy(x=>x.CreatedAt)
+              .LastOrDefaultAsync(x=>x.IsEnabled&&x.ClientId==clientId&&x.UserId == userId);
+
+            //هاي لازمها حللللللللللل
+            //principal.SetAudiences("Currency");
+            var audiences = new List<string>();
+            if (allow?.AllowedAudiences?.Count > 0)
+            {
+              audiences.AddRange(allow.AllowedAudiences);
+            }
+            
+            principal.SetAudiences(audiences);
+            
+          
 
             principal.SetDestinations(claim => claim.Type switch
             {
@@ -990,6 +1004,9 @@ public static class AccountEndpoints
     }
 }
 
+
+
+
 /*
  * app.MapGet("/connect/authorize", async (HttpContext httpContext) =>
    {
@@ -1124,6 +1141,7 @@ public static class AccountEndpoints
 
    }).AllowAnonymous();
  */
+
 
 
 
