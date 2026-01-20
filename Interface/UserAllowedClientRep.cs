@@ -35,9 +35,11 @@ public class UserAllowedClientRep:IUserAllowedClientRep
             {
                 UserId = user.Id,
                 ClientId = allowedClient.ClientId,
-                AllowedAudiences = allowedClient.AllowedAudiences,
                 IsEnabled = true,
+                AllowedAudiences = allowedClient.AllowedAudiences,
             };
+
+            //allow.AllowedAudiences.AddRange(allowedClient.AllowedAudiences);
             _db.AllowedClients.Add(allow);
             await _db.SaveChangesAsync();
             return IdentityResult.Success;

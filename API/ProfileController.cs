@@ -1,3 +1,4 @@
+using System.Text;
 using IdentityServer.Interface;
 using IdentityServer.Interface.ImageService;
 using IdentityServer.Middleware;
@@ -7,6 +8,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.WebUtilities;
 
 namespace IdentityServer.API
 {
@@ -200,6 +202,50 @@ namespace IdentityServer.API
                     user.Email,
                     user.Image,
                 }
+            });
+        }
+        
+        [HttpPost]
+        [Route("RestMyPassword")]
+        [Produces("application/json")]
+        [AllowAnonymous]
+        public async Task<IActionResult> RestMyPassword(ApplicationUserNameView model)
+        {
+            var user = await _manager.FindByNameAsync(model.UserName);
+            
+            if (user == null) throw new ArgumentException("Check UserName", nameof(model.UserName));
+
+            var UserRole = await _manager.GetRolesAsync(user);
+
+            if (UserRole.Count == 0)
+            {
+                throw new ArgumentException("Check UserName Role", nameof(model.UserName));
+            }
+
+            if (!UserRole.Contains("User") || UserRole.Count > 1)
+            {
+                throw new ArgumentException("This User Need Contact Admin", nameof(model.UserName));
+            }
+            var token = await _manager.GeneratePasswordResetTokenAsync(user);
+
+            // ✅ Encode token to be URL-safe
+            var tokenEncoded = WebEncoders.Base64UrlEncode(Encoding.UTF8.GetBytes(token));
+
+            // ✅ build link
+            // خليها من config مثل: https://identity.i-myapp.com
+            var baseUrl = $"{Request.Scheme}://{Request.Host}";
+
+            var link = $"{baseUrl}/account/set-password?uid={Uri.EscapeDataString(user.Id)}&t={Uri.EscapeDataString(tokenEncoded)}";
+            /*
+             *Nedd to Sent Link To Email Or Telphone 
+             *
+             *
+             * 
+             */
+            return Ok(new
+            {
+                status = true,
+                //link,
             });
         }
         

@@ -1,3 +1,4 @@
+using System.Text;
 using IdentityServer.Interface;
 using IdentityServer.Models;
 using IdentityServer.ModelView;
@@ -5,6 +6,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.EntityFrameworkCore;
 using OpenIddict.Abstractions;
 
@@ -41,10 +43,12 @@ namespace IdentityServer.API
 
         [HttpPost]
         [Route("AddAdmin")]
+        [AllowAnonymous]
         public async Task<IActionResult> Register(ApplicationAdminUserView model)
         {
             try
             {
+                
                 var user = await _manager.FindByNameAsync(model.UserName);
                 var role = await _roleManage.FindByNameAsync(model.RoleName);
                 var client = await _clientId.GetClient(model.ClientID);
@@ -72,33 +76,70 @@ namespace IdentityServer.API
                         result = "This ClientID Not registered In  System"
                     });
                 }
-
+                if (model.AllowedAudiences.Count == 0)
+                {
+                    return StatusCode(400, new
+                    {
+                        status = false,
+                        result = "This AllowedAudiences Nedded In  System"
+                    });
+                }
                 var result = await _mangeUserBySuperAdmin.AddNewAdmin(model);
                 if (result.Succeeded)
                 {
                     var UserAdded = await _manager.FindByNameAsync(model.UserName);
-                    await _manager.AddToRoleAsync(UserAdded, model.RoleName);
+                    
+                    var addRole=await _manager.AddToRoleAsync(UserAdded, model.RoleName);
+                    if (!addRole.Succeeded)
+                    {
+                        await _manager.DeleteAsync(UserAdded);
+                        throw new ArgumentException("Role Note Added", nameof(model.RoleName));
+                    }
                     var clientapp = new ApplicationUserAllowedClientView
                     {
                         UserId = UserAdded.Id,
                         ClientId = model.ClientID,
+                        AllowedAudiences = model.AllowedAudiences,
                         IsEnabled = true,
                     };
-                    await _allowedClient.AddUserToClient(clientapp);
+                    var addUserToClient = await _allowedClient.AddUserToClient(clientapp);
+                    if (!addUserToClient.Succeeded)
+                    {
+                        await _manager.RemoveFromRoleAsync(UserAdded, model.RoleName);
+                        await _manager.DeleteAsync(UserAdded);
+                        throw new ArgumentException("AddUserToClient  Errore", nameof(model.RoleName));
+                        
+                    }
+                    var token = await _manager.GeneratePasswordResetTokenAsync(UserAdded);
+
+                    // ✅ Encode token to be URL-safe
+                    var tokenEncoded = WebEncoders.Base64UrlEncode(Encoding.UTF8.GetBytes(token));
+
+                    // ✅ build link
+                    // خليها من config مثل: https://identity.i-myapp.com
+                    var baseUrl = $"{Request.Scheme}://{Request.Host}";
+
+                    var link = $"{baseUrl}/account/set-password?uid={Uri.EscapeDataString(UserAdded.Id)}&t={Uri.EscapeDataString(tokenEncoded)}";
+
                     return StatusCode(200, new
                     {
                         status = true,
-                        result = UserAdded
+                        result = link
                     });
                 }
                 return StatusCode(500, new
                 {
+                    
                     status = false,
                     result = "Error"
                 });
+                
             }
             catch (Exception ex)
             {
+                var user = await _manager.FindByNameAsync(model.UserName);
+                await _manager.RemoveFromRoleAsync(user, model.RoleName);
+                await _manager.DeleteAsync(user);
                 return StatusCode(500, new
                 {
                     status = false,
@@ -137,7 +178,11 @@ namespace IdentityServer.API
                 var result = await _manager.RemoveFromRoleAsync(user,model.RemoveRoleName);
                 if (result.Succeeded)
                 {
-                    await _manager.AddToRoleAsync(user, model.RoleName);
+                    var addToRoleAsync = await _manager.AddToRoleAsync(user, model.RoleName);
+                    if (!addToRoleAsync.Succeeded)
+                    {
+                        throw new ArgumentException("Role Note Added", nameof(model.RoleName));
+                    }
                     return StatusCode(200, new
                     {
                         status = true,

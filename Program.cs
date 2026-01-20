@@ -323,6 +323,7 @@ else
 app.MapAccountEndpoints();
 app.MapLogoutEndPoint();
 app.MapRegisterEndpoints();
+app.MapSetPasswordEndpoints();
 app.MapControllers();
 app.MapGet("/", () => "Hello from   IdentityApp!");
 app.Run();
