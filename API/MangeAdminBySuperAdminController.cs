@@ -40,10 +40,9 @@ namespace IdentityServer.API
             _clientId = clientId;
             _managerClient = managerClient;
         }
-
+        
         [HttpPost]
         [Route("AddAdmin")]
-        [AllowAnonymous]
         public async Task<IActionResult> Register(ApplicationAdminUserView model)
         {
             try
@@ -147,7 +146,6 @@ namespace IdentityServer.API
                 });
             }
         }
-        
         
         [HttpPost]
         [Route("EditeAdminRole")]
@@ -278,6 +276,7 @@ namespace IdentityServer.API
             }
         }
         
+        
         [HttpPost]
         [Route("getUserRole")]
         public async Task<IActionResult> getUserRole(ApplicationAdminGetRoleView model)
@@ -301,6 +300,69 @@ namespace IdentityServer.API
                     result = ex.ToString()
                 });
             }
+        }
+        
+        //GetUserByUserName
+        [HttpPost]
+        [Route("GetUserByUserName")]
+        [Produces("application/json")] 
+        public async Task<IActionResult> GetUserByID(ApplicationUserNameView model)
+        {
+            
+            var user = await _manager.FindByNameAsync(model.UserName);
+            if (user == null) return BadRequest(new
+            {
+                message = "Check UserName"
+            });
+            return Ok(new
+            {
+                status = true,
+                result = new
+                {
+                    user.UserName,
+                    user.FName,
+                    user.LName,
+                    user.Identity,
+                    user.Gender,
+                    user.Birthday,
+                    user.Email,
+                    user.Image,
+                }
+            });
+        }
+        [HttpPost]
+        [Route("RestMyPasswordByAdmin")]
+        [Produces("application/json")]
+        public async Task<IActionResult> RestMyPassword(ApplicationUserNameView model)
+        {
+            var user = await _manager.FindByNameAsync(model.UserName);
+
+            if (user == null) return BadRequest(new
+            {
+                message = "Check UserName"
+            });
+            
+            var token = await _manager.GeneratePasswordResetTokenAsync(user);
+
+            // ✅ Encode token to be URL-safe
+            var tokenEncoded = WebEncoders.Base64UrlEncode(Encoding.UTF8.GetBytes(token));
+
+            // ✅ build link
+            // خليها من config مثل: https://identity.i-myapp.com
+            var baseUrl = $"{Request.Scheme}://{Request.Host}";
+
+            var link = $"{baseUrl}/account/set-password?uid={Uri.EscapeDataString(user.Id)}&t={Uri.EscapeDataString(tokenEncoded)}";
+            /*
+             *Nedd to Sent Link To Email Or Telphone
+             *
+             *
+             *
+             */
+            return Ok(new
+            {
+                status = true,
+                link,
+            });
         }
     }
 }

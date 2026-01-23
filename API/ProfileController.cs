@@ -180,35 +180,10 @@ namespace IdentityServer.API
             return true;
         }
         
-        //GetUserByUserName
-        [HttpPost]
-        [Route("GetUserByUserName")]
-        [Produces("application/json")]
-        [Authorize(Policy = "SuperAdmin")]
-        public async Task<IActionResult> GetUserByID(ApplicationUserNameView model)
-        {
-            var user = await _manager.FindByNameAsync(model.UserName);
-            return Ok(new
-            {
-                status = true,
-                result = new
-                {
-                    user.UserName,
-                    user.FName,
-                    user.LName,
-                    user.Identity,
-                    user.Gender,
-                    user.Birthday,
-                    user.Email,
-                    user.Image,
-                }
-            });
-        }
         
         [HttpPost]
         [Route("RestMyPassword")]
         [Produces("application/json")]
-        [AllowAnonymous]
         public async Task<IActionResult> RestMyPassword(ApplicationUserNameView model)
         {
             var user = await _manager.FindByNameAsync(model.UserName);
