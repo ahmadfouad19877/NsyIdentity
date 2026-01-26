@@ -124,7 +124,8 @@ builder.Services.AddOpenIddict()
             OpenIddictConstants.Scopes.Profile,
             OpenIddictConstants.Scopes.OfflineAccess, // ✅ مهم
             "local_app_api",
-            "GApplication"
+            "GApplication",
+            "WebApplication"
         );
         // شهادات التوقيع والتشفير (للتجارب / التطوير)
         options

@@ -12,12 +12,11 @@ public static class OpenIddictClientsSeed
         var manager = scope.ServiceProvider.GetRequiredService<IOpenIddictApplicationManager>();
         var userManager = scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
         var db = scope.ServiceProvider.GetRequiredService<ApplicationDb>();
-        var app= await manager.FindByClientIdAsync("PostmanLocal");
-        var client = await manager.GetClientIdAsync(app);
+        //var app= await manager.FindByClientIdAsync("PostmanLocal");
+       // var client = await manager.GetClientIdAsync(app);
         
-        Console.WriteLine(client);
         
-        if (client is null)
+        if (false)
         {
             
             await EnsureClient(manager,
