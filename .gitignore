@@ -15,3 +15,8 @@ logs/
 TestResults/
 coverage/
 publish/
+
+appsettings.Development.json
+appsettings.Local.json
+secrets/
+*.env

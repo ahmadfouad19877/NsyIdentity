@@ -88,8 +88,11 @@ public static class LogoutEndPoint
         {
             ctx.Session?.Clear();
 
-            // أهم سطر: سجّل خروج الكوكي تبع تسجيل الدخول
-            await ctx.SignOutAsync(IdentityConstants.ApplicationScheme);
+            await ctx.SignOutAsync(); // أهم سطر فعليًا
+
+            ctx.Response.Headers.CacheControl = "no-store, no-cache, must-revalidate";
+            ctx.Response.Headers.Pragma = "no-cache";
+            ctx.Response.Headers.Expires = "0";
 
             return Results.Ok();
         }).AllowAnonymous();
