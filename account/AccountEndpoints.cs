@@ -62,11 +62,8 @@ public static class AccountEndpoints
         // =========================
         // GET: /cb
         // =========================
-        app.MapGet("/cb", (HttpContext ctx) =>
+        app.MapGet("/cb", async (HttpContext ctx) =>
         {
-            var qs = ctx.Request.QueryString.Value ?? "";
-            var safeQs = WebUtility.HtmlEncode(qs);
-
             var code = ctx.Request.Query["code"].ToString();
             var state = ctx.Request.Query["state"].ToString();
             var error = ctx.Request.Query["error"].ToString();
@@ -74,36 +71,44 @@ public static class AccountEndpoints
 
             static string E(string? s) => WebUtility.HtmlEncode(s ?? "");
 
-            var safeCode = E(code);
-            var safeState = E(state);
-            var safeError = E(error);
-            var safeErrorDesc = E(errorDesc);
+            // ✅ إذا في error: اعرض صفحة Error فخمة + امسح session
+            if (!string.IsNullOrWhiteSpace(error))
+            {
+                ClearAllSessionSafe(ctx);
 
-            var hasCode = !string.IsNullOrWhiteSpace(code);
-            var hasError = !string.IsNullOrWhiteSpace(error);
+                var htmlErr = BuildCallbackErrorHtml(
+                    safeError: E(error),
+                    safeErrorDesc: E(errorDesc),
+                    safeState: E(state));
 
-            // raw values into JS safely
-            var jsCode = System.Text.Json.JsonSerializer.Serialize(code ?? "");
-            var jsState = System.Text.Json.JsonSerializer.Serialize(state ?? "");
+                return Results.Content(htmlErr, "text/html; charset=utf-8");
+            }
 
-            var html = BuildCallbackHtml(
-                hasError: hasError,
-                hasCode: hasCode,
-                safeCode: safeCode,
-                safeState: safeState,
-                safeError: safeError,
-                safeErrorDesc: safeErrorDesc,
-                safeQs: safeQs,
-                jsCode: jsCode,
-                jsState: jsState
-            );
+            // ✅ إذا في code: اعرض Success فخم + امسح session بالكامل
+            if (!string.IsNullOrWhiteSpace(code))
+            {
+                // ✅ امسح كل Session
+                ClearAllSessionSafe(ctx);
 
-            return Results.Content(html, "text/html; charset=utf-8");
+                // ✅ إذا بدك أيضًا تمسح كوكي تسجيل الدخول (اختياري):
+                 await ctx.SignOutAsync(IdentityConstants.ApplicationScheme);
+
+                var htmlOk = BuildCallbackSuccessHtml();
+                return Results.Content(htmlOk, "text/html; charset=utf-8");
+            }
+
+            // ✅ إذا لا code ولا error: صفحة "No code"
+            ClearAllSessionSafe(ctx);
+
+            var htmlNo = BuildCallbackNoCodeHtml(
+                safeState: E(state));
+
+            return Results.Content(htmlNo, "text/html; charset=utf-8");
         }).AllowAnonymous();
 
 
         // =========================
-        // POST: /cb/code (كما عندك)
+        // POST: /cb/code (كما عندك - لكن بعد تعديل /cb صار غالبًا غير مستخدم)
         // =========================
         app.MapPost("/cb/code", (HttpContext ctx) =>
         {
@@ -118,7 +123,7 @@ public static class AccountEndpoints
 
             return Results.Ok(new { code });
         }).AllowAnonymous();
-        
+
 
         // =========================
         // GET: /connect/authorize (كما هو عندك)
@@ -235,20 +240,20 @@ public static class AccountEndpoints
             var principal = new ClaimsPrincipal(identity);
 
             principal.SetScopes(request.GetScopes());
-            var allow=await db.AllowedClients.OrderBy(x=>x.CreatedAt)
-              .LastOrDefaultAsync(x=>x.IsEnabled&&x.ClientId==clientId&&x.UserId == userId);
 
-            //هاي لازمها حللللللللللل
-            //principal.SetAudiences("Currency");
+            // ✅ حل LastOrDefaultAsync: لازم OrderBy محدد
+            var allow = await db.AllowedClients
+                .AsNoTracking()
+                .Where(x => x.IsEnabled && x.ClientId == clientId && x.UserId == userId)
+                .OrderByDescending(x => x.CreatedAt)
+                .FirstOrDefaultAsync();
+
+            // ✅ Audiences
             var audiences = new List<string>();
             if (allow?.AllowedAudiences?.Count > 0)
-            {
-              audiences.AddRange(allow.AllowedAudiences);
-            }
-            
+                audiences.AddRange(allow.AllowedAudiences);
+
             principal.SetAudiences(audiences);
-            
-          
 
             principal.SetDestinations(claim => claim.Type switch
             {
@@ -312,6 +317,24 @@ public static class AccountEndpoints
         }
 
         static string Enc(string? s) => WebUtility.HtmlEncode(s ?? "");
+
+        static void ClearAllSessionSafe(HttpContext ctx)
+        {
+            try
+            {
+                ctx.Session.Clear();
+
+                // إزالة مفاتيح معروفة (اختياري)
+                ctx.Session.Remove("cb_code_used");
+                ctx.Session.Remove("cb_code_value");
+                ctx.Session.Remove("pkce_state");
+                ctx.Session.Remove("pkce_verifier");
+            }
+            catch
+            {
+                // لا تفشل الطلب بسبب session
+            }
+        }
 
         static string BuildLoginHtml(string returnUrl, string? ok, string? err)
         {
@@ -489,7 +512,7 @@ public static class AccountEndpoints
       width:100%;
       border-radius: 18px;
       border: 1px solid var(--line);
-      background: linear-gradient(180deg, var(--field), var(--field2));
+      background: linear-gradient(180deg, rgba(255,255,255,0.06), rgba(255,255,255,0.08));
       padding: 14px 14px;
       color: rgba(255,255,255,0.92);
       outline: none;
@@ -553,20 +576,6 @@ public static class AccountEndpoints
       cursor:pointer;
     }}
     .go:hover {{ filter: brightness(0.97); }}
-
-    .below {{
-      text-align:center;
-      margin-top: 14px;
-      color: rgba(255,255,255,0.65);
-      font-size: 13px;
-    }}
-    .below a {{
-      color: var(--gold);
-      font-weight: 900;
-      text-decoration:none;
-      letter-spacing: 0.4px;
-    }}
-    .below a:hover {{ text-decoration: underline; }}
   </style>
 </head>
 
@@ -614,7 +623,6 @@ public static class AccountEndpoints
       input.type = (input.type === 'password') ? 'text' : 'password';
     }}
 
-    // OPTIONAL: sanitize username same idea (no arabic)
     (function() {{
       var u = document.getElementById('username');
       if (!u) return;
@@ -630,80 +638,28 @@ public static class AccountEndpoints
 </html>";
         }
 
-        static string BuildCallbackHtml(
-            bool hasError,
-            bool hasCode,
-            string safeCode,
-            string safeState,
-            string safeError,
-            string safeErrorDesc,
-            string safeQs,
-            string jsCode,
-            string jsState)
+        // ✅ Success page
+        static string BuildCallbackSuccessHtml()
         {
-            var topTitle1 = hasError ? "Callback" : "Callback";
-            var topTitle2 = hasError ? "Error" : "Received";
-
-            var pills = hasError
-                ? @"<span class=""pill err"">ERROR</span>"
-                : (hasCode ? @"<span class=""pill ok"">CODE FOUND</span>" : @"<span class=""pill"">NO CODE</span>");
-
-            var statePill = string.IsNullOrWhiteSpace(safeState) ? "" : @"&nbsp;&nbsp;<span class=""pill"">STATE PRESENT</span>";
-
-            var bodyBlock = hasError
-                ? $@"
-                    <div class=""alert err"">
-                      <div class=""ico"">❌</div>
-                      <div class=""txt"">
-                        <div style=""font-weight:900;margin-bottom:6px"">Authentication failed</div>
-                        <div><b>error</b>: <code>{safeError}</code></div>
-                        {(string.IsNullOrWhiteSpace(safeErrorDesc) ? "" : $@"<div style=""margin-top:6px""><b>error_description</b>: <code>{safeErrorDesc}</code></div>")}
-                      </div>
-                    </div>
-                  "
-                : $@"
-                    <div class=""desc"" style=""margin-top:6px"">
-                      One click: copy the code (Safari-stable) then POST <b>/account/logoutcode</b>.
-                    </div>
-
-                    <div class=""row"">
-                      <div id=""codeBox"" class=""code-box"" oncopy=""return false"" oncut=""return false"" oncontextmenu=""return false"">
-                        {(hasCode ? safeCode : "<span style='color:rgba(255,255,255,0.45)'>No code parameter found.</span>")}
-                      </div>
-
-                      <button id=""copyBtn"" class=""btnGoldSmall"" {(hasCode ? "" : "disabled")}>
-                        Copy Code & Logout
-                      </button>
-                    </div>
-
-                    {(string.IsNullOrWhiteSpace(safeState) ? "" : $@"
-                      <div style=""margin-top:14px;color:rgba(255,255,255,0.62);font-size:13px""><b>State</b></div>
-                      <div class=""code-box"" style=""margin-top:8px"">{safeState}</div>
-                    ")}
-                  ";
-
             return $@"
 <!DOCTYPE html>
 <html lang=""en"">
 <head>
   <meta charset=""utf-8"" />
   <meta name=""viewport"" content=""width=device-width, initial-scale=1"" />
-  <title>Callback</title>
+  <title>Success</title>
 
   <style>
     :root {{
       --bg0:#050507;
       --bg1:#0b0b10;
-      --line: rgba(255,255,255,0.10);
       --text: rgba(255,255,255,0.92);
       --muted: rgba(255,255,255,0.62);
       --gold:#d8c38a;
       --shadow: 0 22px 60px rgba(0,0,0,0.65);
       --radius: 26px;
-      --field: rgba(255,255,255,0.06);
-      --field2: rgba(255,255,255,0.08);
+      --line: rgba(255,255,255,0.10);
     }}
-
     * {{ box-sizing:border-box; }}
     body {{
       margin:0;
@@ -719,19 +675,16 @@ public static class AccountEndpoints
       font-family: -apple-system, BlinkMacSystemFont, ""Segoe UI"", Roboto, Arial;
       padding: 28px 18px;
     }}
-
-    .phoneFrame {{ width: 100%; max-width: 520px; }}
-
+    .wrap {{ width:100%; max-width:520px; }}
     .sheet {{
       background: linear-gradient(180deg, rgba(20,20,28,0.88), rgba(14,14,18,0.88));
       border: 1px solid rgba(255,255,255,0.10);
       border-radius: var(--radius);
       box-shadow: var(--shadow);
       overflow: hidden;
-      padding: 16px 18px 18px;
+      padding: 18px;
     }}
-
-    .secureBar {{
+    .top {{
       display:flex;
       align-items:center;
       justify-content:space-between;
@@ -751,21 +704,176 @@ public static class AccountEndpoints
       flex: 0 0 34px;
       font-size: 16px;
     }}
-    .secureText {{ flex:1; }}
-    .secureTitle {{ font-size: 13px; font-weight: 800; color: rgba(255,255,255,0.90); }}
-    .secureSub {{ font-size: 11px; color: rgba(255,255,255,0.55); margin-top: 2px; }}
     .pill {{
       font-size: 11px;
       padding: 6px 10px;
       border-radius: 999px;
-      background: rgba(255,255,255,0.06);
-      border: 1px solid rgba(255,255,255,0.12);
-      color: rgba(255,255,255,0.75);
+      background: rgba(16,185,129,0.12);
+      border: 1px solid rgba(16,185,129,0.25);
+      color: rgba(255,255,255,0.80);
       white-space: nowrap;
       display:inline-block;
     }}
-    .pill.ok {{ background: rgba(16,185,129,0.12); border-color: rgba(16,185,129,0.25); }}
-    .pill.err {{ background: rgba(239,68,68,0.12); border-color: rgba(239,68,68,0.25); }}
+    .titleRow {{
+      display:flex;
+      align-items:baseline;
+      gap: 8px;
+      margin-top: 6px;
+    }}
+    .title {{
+      font-family: Georgia, ""Times New Roman"", serif;
+      font-size: 34px;
+      margin:0;
+      color: var(--gold);
+      font-style: italic;
+    }}
+    .title2 {{
+      font-family: Georgia, ""Times New Roman"", serif;
+      font-size: 34px;
+      margin:0;
+      color: rgba(255,255,255,0.86);
+    }}
+    .desc {{
+      margin: 12px 0 0;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.55;
+    }}
+    .ok {{
+      margin-top: 16px;
+      padding: 14px 14px;
+      border-radius: 18px;
+      border: 1px solid rgba(16,185,129,0.35);
+      background: rgba(16,185,129,0.10);
+      display:flex;
+      gap: 10px;
+      align-items:flex-start;
+    }}
+    .ico {{
+      width: 34px; height: 34px;
+      border-radius: 12px;
+      display:flex; align-items:center; justify-content:center;
+      background: rgba(16,185,129,0.14);
+      border: 1px solid rgba(16,185,129,0.25);
+      flex: 0 0 34px;
+      font-size: 16px;
+    }}
+    .txt {{
+      font-size: 13px;
+      line-height: 1.45;
+      color: rgba(255,255,255,0.90);
+    }}
+    .hint {{
+      margin-top: 10px;
+      color: rgba(255,255,255,0.55);
+      font-size: 12px;
+    }}
+    .btn {{
+      margin-top: 16px;
+      width: 100%;
+      border: none;
+      cursor: pointer;
+      border-radius: 18px;
+      padding: 14px 14px;
+      background: linear-gradient(180deg, #f1e5be, var(--gold));
+      color: #1b1407;
+      font-weight: 900;
+      letter-spacing: 0.8px;
+      text-transform: uppercase;
+      font-size: 13px;
+    }}
+    .btn:hover {{ filter: brightness(1.03); }}
+  </style>
+</head>
+
+<body>
+  <div class=""wrap"">
+    <div class=""sheet"">
+      <div class=""top"">
+        <div style=""display:flex;gap:10px;align-items:center"">
+          <div class=""lock"">🔒</div>
+          <div>
+            <div style=""font-size:13px;font-weight:800;color:rgba(255,255,255,0.9)"">Secure Connection</div>
+            <div style=""font-size:11px;color:rgba(255,255,255,0.55);margin-top:2px"">SSL / TLS Enabled</div>
+          </div>
+        </div>
+        <div class=""pill"">SUCCESS</div>
+      </div>
+
+      <div class=""titleRow"">
+        <h1 class=""title"">Login</h1>
+        <h1 class=""title2"">Success</h1>
+      </div>
+
+      <div class=""desc"">
+        You can safely close this page and return to the application.
+      </div>
+
+      <div class=""ok"">
+        <div class=""ico"">✅</div>
+        <div class=""txt"">
+          Authentication completed successfully.<br/>
+          For security, all temporary session data was cleared.
+          <div class=""hint"">If you opened this page inside a WebView, you can now close it.</div>
+        </div>
+      </div>
+
+      <button class=""btn"" type=""button"" onclick=""window.close(); setTimeout(()=>location.replace('/'), 200);"">
+        Close
+      </button>
+    </div>
+  </div>
+</body>
+</html>";
+        }
+
+        // ✅ No code page
+        static string BuildCallbackNoCodeHtml(string safeState)
+        {
+            return $@"
+<!DOCTYPE html>
+<html lang=""en"">
+<head>
+  <meta charset=""utf-8"" />
+  <meta name=""viewport"" content=""width=device-width, initial-scale=1"" />
+  <title>Callback</title>
+
+  <style>
+    :root {{
+      --bg0:#050507;
+      --bg1:#0b0b10;
+      --text: rgba(255,255,255,0.92);
+      --muted: rgba(255,255,255,0.62);
+      --gold:#d8c38a;
+      --shadow: 0 22px 60px rgba(0,0,0,0.65);
+      --radius: 26px;
+    }}
+
+    * {{ box-sizing:border-box; }}
+    body {{
+      margin:0;
+      min-height:100vh;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      background:
+        radial-gradient(900px 500px at 25% 15%, rgba(216,195,138,0.10), transparent 55%),
+        radial-gradient(700px 500px at 80% 35%, rgba(255,255,255,0.06), transparent 60%),
+        linear-gradient(180deg, var(--bg0), var(--bg1));
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, ""Segoe UI"", Roboto, Arial;
+      padding: 28px 18px;
+    }}
+
+    .wrap {{ width:100%; max-width:520px; }}
+    .sheet {{
+      background: linear-gradient(180deg, rgba(20,20,28,0.88), rgba(14,14,18,0.88));
+      border: 1px solid rgba(255,255,255,0.10);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      overflow: hidden;
+      padding: 18px;
+    }}
 
     .titleRow {{
       display:flex;
@@ -779,7 +887,6 @@ public static class AccountEndpoints
       margin:0;
       color: var(--gold);
       font-style: italic;
-      letter-spacing: 0.2px;
     }}
     .title2 {{
       font-family: Georgia, ""Times New Roman"", serif;
@@ -789,359 +896,164 @@ public static class AccountEndpoints
     }}
 
     .desc {{
-      margin: 10px 0 18px;
+      margin: 12px 0 0;
       color: var(--muted);
       font-size: 13px;
-      line-height: 1.5;
+      line-height: 1.55;
     }}
 
-    .alert {{
-      display:flex;
-      gap:10px;
-      align-items:flex-start;
-      padding: 12px 12px;
-      border-radius: 16px;
-      margin: 10px 0 14px;
-      border:1px solid;
-      background: rgba(255,255,255,0.04);
-    }}
-    .alert .ico {{
-      width: 28px; height: 28px;
-      border-radius: 10px;
-      display:flex; align-items:center; justify-content:center;
-      background: rgba(255,255,255,0.06);
-      flex: 0 0 28px;
-    }}
-    .alert .txt {{
-      font-size: 13px;
-      color: rgba(255,255,255,0.9);
-      line-height: 1.35;
-      padding-top: 3px;
-      width: 100%;
-    }}
-    .alert.err {{ border-color: rgba(239,68,68,0.35); background: rgba(239,68,68,0.08); }}
-
-    .row {{
-      display:flex;
-      gap: 12px;
-      align-items: stretch;
-      margin-top: 12px;
-    }}
-
-    .code-box {{
-      flex: 1;
-      border-radius: 18px;
-      border: 1px dashed rgba(216,195,138,0.35);
-      background: linear-gradient(180deg, rgba(255,255,255,0.04), rgba(255,255,255,0.06));
+    .box {{
+      margin-top: 16px;
       padding: 14px 14px;
-      color: rgba(255,255,255,0.92);
-      outline: none;
+      border-radius: 18px;
+      border: 1px solid rgba(245,158,11,0.30);
+      background: rgba(245,158,11,0.10);
       font-size: 13px;
+      line-height: 1.45;
+    }}
+
+    code {{
       font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, ""Liberation Mono"", ""Courier New"", monospace;
       word-break: break-all;
-      user-select:none;
-      -webkit-user-select:none;
-      -webkit-touch-callout:none;
-      display:flex;
-      align-items:center;
-      min-height: 52px;
     }}
-
-    .btnGoldSmall {{
-      width: 210px;
-      border:none;
-      cursor:pointer;
-      border-radius: 18px;
-      padding: 14px 14px;
-      background: linear-gradient(180deg, #f1e5be, var(--gold));
-      color: #1b1407;
-      font-weight: 900;
-      letter-spacing: 0.8px;
-      font-size: 13px;
-      text-transform: uppercase;
-    }}
-    .btnGoldSmall:disabled {{
-      opacity: .55;
-      cursor: not-allowed;
-      filter: grayscale(0.2);
-    }}
-
-    details {{ margin-top: 14px; }}
-    summary {{ cursor:pointer; color: rgba(255,255,255,0.55); font-size: 13px; }}
-
-    .qs {{
-      margin-top: 10px;
-      background: rgba(0,0,0,0.35);
-      border: 1px solid rgba(255,255,255,0.10);
-      color: rgba(255,255,255,0.75);
-      border-radius: 18px;
-      padding: 14px;
-      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, ""Liberation Mono"", ""Courier New"", monospace;
-      font-size: 12px;
-      word-break: break-all;
-    }}
-
-    .toast {{
-      position: fixed;
-      left: 50%;
-      bottom: 22px;
-      transform: translateX(-50%);
-      background: rgba(17,24,39,0.92);
-      color: #fff;
-      padding: 10px 14px;
-      border-radius: 999px;
-      font-size: 13px;
-      opacity: 0;
-      pointer-events: none;
-      transition: opacity .2s ease;
-    }}
-    .toast.show {{ opacity: 1; }}
   </style>
 </head>
 
 <body>
-  <div class=""phoneFrame"">
+  <div class=""wrap"">
     <div class=""sheet"">
-      {BuildSecureBarHtml()}
-
       <div class=""titleRow"">
-        <h1 class=""title"">{topTitle1}</h1>
-        <h1 class=""title2"">{topTitle2}</h1>
+        <h1 class=""title"">Callback</h1>
+        <h1 class=""title2"">Missing</h1>
       </div>
 
       <div class=""desc"">
-        {(hasError ? "The authorization server returned an error." : "Use the button to copy the code and logout immediately.")}
+        The callback was reached but no authorization <b>code</b> was found.
       </div>
 
-      <div style=""display:flex;justify-content:center;margin-bottom:10px"">
-        {pills}{statePill}
+      <div class=""box"">
+        <div><b>State</b>: <code>{safeState}</code></div>
+        <div style=""margin-top:8px;color:rgba(255,255,255,0.70)"">Please try again from the app.</div>
       </div>
-
-      {bodyBlock}
-
-      <details>
-        <summary>Show full query string</summary>
-        <div class=""qs"">{safeQs}</div>
-      </details>
     </div>
   </div>
+</body>
+</html>";
+        }
 
-  <div id=""toast"" class=""toast"">Copied ✅</div>
+        // ✅ Error page
+        static string BuildCallbackErrorHtml(string safeError, string safeErrorDesc, string safeState)
+        {
+            return $@"
+<!DOCTYPE html>
+<html lang=""en"">
+<head>
+  <meta charset=""utf-8"" />
+  <meta name=""viewport"" content=""width=device-width, initial-scale=1"" />
+  <title>Callback Error</title>
 
-  <script>
-    (function () {{
-      const CODE = {jsCode};
-      const STATE = {jsState};
-      const toast = document.getElementById('toast');
-      const copyBtn = document.getElementById('copyBtn');
+  <style>
+    :root {{
+      --bg0:#050507;
+      --bg1:#0b0b10;
+      --text: rgba(255,255,255,0.92);
+      --muted: rgba(255,255,255,0.62);
+      --gold:#d8c38a;
+      --shadow: 0 22px 60px rgba(0,0,0,0.65);
+      --radius: 26px;
+    }}
 
-      function showToast(msg) {{
-        if (!toast) return;
-        toast.textContent = msg;
-        toast.classList.add('show');
-        setTimeout(() => toast.classList.remove('show'), 1700);
-      }}
+    * {{ box-sizing:border-box; }}
+    body {{
+      margin:0;
+      min-height:100vh;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      background:
+        radial-gradient(900px 500px at 25% 15%, rgba(216,195,138,0.10), transparent 55%),
+        radial-gradient(700px 500px at 80% 35%, rgba(255,255,255,0.06), transparent 60%),
+        linear-gradient(180deg, var(--bg0), var(--bg1));
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, ""Segoe UI"", Roboto, Arial;
+      padding: 28px 18px;
+    }}
 
-      // ✅ Safari-stable copy
-      function copyStable(text) {{
-        const ta = document.createElement('textarea');
-        ta.value = text;
-        ta.setAttribute('readonly', '');
-        ta.style.position = 'fixed';
-        ta.style.left = '-9999px';
-        ta.style.top = '0';
-        document.body.appendChild(ta);
+    .wrap {{ width:100%; max-width:520px; }}
+    .sheet {{
+      background: linear-gradient(180deg, rgba(20,20,28,0.88), rgba(14,14,18,0.88));
+      border: 1px solid rgba(255,255,255,0.10);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      overflow: hidden;
+      padding: 18px;
+    }}
 
-        ta.focus();
-        ta.select();
-        ta.setSelectionRange(0, text.length);
+    .titleRow {{
+      display:flex;
+      align-items:baseline;
+      gap: 8px;
+      margin-top: 6px;
+    }}
+    .title {{
+      font-family: Georgia, ""Times New Roman"", serif;
+      font-size: 34px;
+      margin:0;
+      color: var(--gold);
+      font-style: italic;
+    }}
+    .title2 {{
+      font-family: Georgia, ""Times New Roman"", serif;
+      font-size: 34px;
+      margin:0;
+      color: rgba(255,255,255,0.86);
+    }}
 
-        const ok = document.execCommand('copy');
-        document.body.removeChild(ta);
-        return ok;
-      }}
+    .desc {{
+      margin: 12px 0 0;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.55;
+    }}
 
-      async function logoutCode() {{
-        const r = await fetch('/account/logoutcode', {{
-          method: 'POST',
-          credentials: 'include',
-          keepalive: true,
-          headers: {{ 'Content-Type': 'application/json' }},
-          body: '{{}}'
-        }});
+    .box {{
+      margin-top: 16px;
+      padding: 14px 14px;
+      border-radius: 18px;
+      border: 1px solid rgba(239,68,68,0.35);
+      background: rgba(239,68,68,0.10);
+      font-size: 13px;
+      line-height: 1.45;
+    }}
 
-        if (!r.ok) throw new Error('logout_failed_' + r.status);
-      }}
+    code {{
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, ""Liberation Mono"", ""Courier New"", monospace;
+      word-break: break-all;
+    }}
+  </style>
+</head>
 
-      if (copyBtn && !copyBtn.disabled) {{
-        copyBtn.addEventListener('click', async () => {{
-          copyBtn.disabled = true;
-          copyBtn.textContent = 'WORKING...';
+<body>
+  <div class=""wrap"">
+    <div class=""sheet"">
+      <div class=""titleRow"">
+        <h1 class=""title"">Callback</h1>
+        <h1 class=""title2"">Error</h1>
+      </div>
 
-          try {{
-            const ok = copyStable(CODE);
-            if (!ok) throw new Error('copy_failed');
+      <div class=""desc"">
+        Authentication failed.
+      </div>
 
-            showToast('Copied ✅ Logging out...');
-
-            await logoutCode();
-
-            showToast('Logged out 🔐');
-
-            setTimeout(() => window.location.replace('/logout-success'), 450);
-          }} catch (e) {{
-            showToast('Failed ❌');
-            copyBtn.disabled = false;
-            copyBtn.textContent = 'COPY CODE & LOGOUT';
-          }}
-        }});
-      }}
-    }})();
-  </script>
+      <div class=""box"">
+        <div><b>error</b>: <code>{safeError}</code></div>
+        {(string.IsNullOrWhiteSpace(safeErrorDesc) ? "" : $@"<div style=""margin-top:8px""><b>error_description</b>: <code>{safeErrorDesc}</code></div>")}
+        {(string.IsNullOrWhiteSpace(safeState) ? "" : $@"<div style=""margin-top:8px""><b>state</b>: <code>{safeState}</code></div>")}
+      </div>
+    </div>
+  </div>
 </body>
 </html>";
         }
     }
 }
-
-
-
-
-/*
- * app.MapGet("/connect/authorize", async (HttpContext httpContext) =>
-   {
-       // ✅ 0) Authenticate explicitly using Cookie scheme (Identity)
-       var cookieResult = await httpContext.AuthenticateAsync(IdentityConstants.ApplicationScheme);
-
-       if (!cookieResult.Succeeded || cookieResult.Principal?.Identity?.IsAuthenticated != true)
-       {
-           return Results.Challenge(
-               new AuthenticationProperties
-               {
-                   RedirectUri = httpContext.Request.PathBase + httpContext.Request.Path + httpContext.Request.QueryString
-               },
-               authenticationSchemes: new[] { IdentityConstants.ApplicationScheme });
-       }
-
-       // ✅ 0.1) Make sure the cookie principal is used for reading claims (userId/roles/name)
-       httpContext.User = cookieResult.Principal;
-
-       // 1) OpenIddict request
-       var request = httpContext.GetOpenIddictServerRequest()
-                    ?? throw new InvalidOperationException("OpenIddict request is missing.");
-
-       // ✅ 1.1) Device params from query (Redirect)
-       var deviceId = request.GetParameter("device_id")?.ToString()
-                     ?? httpContext.Request.Query["device_id"].ToString();
-
-       var deviceName = request.GetParameter("device_name")?.ToString()
-                       ?? httpContext.Request.Query["device_name"].ToString();
-
-       var platform = request.GetParameter("platform")?.ToString()
-                      ?? httpContext.Request.Query["platform"].ToString();
-
-       if (string.IsNullOrWhiteSpace(deviceId) ||
-           string.IsNullOrWhiteSpace(deviceName) ||
-           string.IsNullOrWhiteSpace(platform))
-       {
-           return Results.BadRequest(new
-           {
-               error = "invalid_request",
-               error_description = "device_id, device_name and platform are required on /connect/authorize"
-           });
-       }
-
-       // 2) userId from cookie
-       var userId =
-           httpContext.User.FindFirstValue(ClaimTypes.NameIdentifier) ??
-           httpContext.User.FindFirstValue(OpenIddictConstants.Claims.Subject);
-
-       // 3) clientId from request
-       var clientId = request.ClientId;
-
-       if (string.IsNullOrWhiteSpace(userId) || string.IsNullOrWhiteSpace(clientId))
-           return Results.Forbid();
-
-       // ✅ 4) Allow-list
-       var db = httpContext.RequestServices.GetRequiredService<ApplicationDb>();
-
-       var isAllowed = await db.AllowedClients.AnyAsync(x =>
-           x.UserId == userId &&
-           x.ClientId == clientId &&
-           x.IsEnabled);
-
-       if (!isAllowed)
-       {
-           Console.WriteLine($"❌ Blocked: user {userId} is not allowed for client {clientId}");
-           return Results.Forbid();
-       }
-
-       // 5) ClaimsIdentity
-       var identity = new ClaimsIdentity(OpenIddictServerAspNetCoreDefaults.AuthenticationScheme);
-
-       identity.AddClaim(OpenIddictConstants.Claims.Subject, userId);
-
-       var name = httpContext.User.Identity?.Name;
-       if (!string.IsNullOrWhiteSpace(name))
-           identity.AddClaim(OpenIddictConstants.Claims.Name, name);
-
-       identity.AddClaim("azp", clientId);
-
-       foreach (var role in httpContext.User.FindAll(ClaimTypes.Role).Select(x => x.Value))
-           identity.AddClaim(OpenIddictConstants.Claims.Role, role);
-
-       // ✅ internal device claims (keep them in code only)
-       identity.AddClaim("device_id", deviceId);
-       identity.AddClaim("device_name", deviceName);
-       identity.AddClaim("platform", platform);
-
-       var principal = new ClaimsPrincipal(identity);
-
-       principal.SetScopes(request.GetScopes());
-
-       principal.SetDestinations(claim => claim.Type switch
-       {
-           OpenIddictConstants.Claims.Subject => new[]
-           {
-               OpenIddictConstants.Destinations.AccessToken,
-               OpenIddictConstants.Destinations.IdentityToken
-           },
-
-           OpenIddictConstants.Claims.Name => new[]
-           {
-               OpenIddictConstants.Destinations.AccessToken,
-               OpenIddictConstants.Destinations.IdentityToken
-           },
-
-           OpenIddictConstants.Claims.Role => new[]
-           {
-               OpenIddictConstants.Destinations.AccessToken
-           },
-
-           "azp" => new[]
-           {
-               OpenIddictConstants.Destinations.AccessToken
-           },
-
-           // ✅ do NOT leak device info in access/id tokens
-           "device_id" => Array.Empty<string>(),
-           "device_name" => Array.Empty<string>(),
-           "platform" => Array.Empty<string>(),
-
-           _ => new[]
-           {
-               OpenIddictConstants.Destinations.AccessToken
-           }
-       });
-
-       return Results.SignIn(
-           principal,
-           properties: null,
-           authenticationScheme: OpenIddictServerAspNetCoreDefaults.AuthenticationScheme);
-
-   }).AllowAnonymous();
- */
-
-
-
-
