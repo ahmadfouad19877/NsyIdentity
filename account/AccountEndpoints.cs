@@ -250,9 +250,11 @@ public static class AccountEndpoints
 
             // ✅ Audiences
             var audiences = new List<string>();
+            audiences.Add("ItemPrice");
             if (allow?.AllowedAudiences?.Count > 0)
                 audiences.AddRange(allow.AllowedAudiences);
-
+            // remove duplicates
+            audiences = audiences.Distinct(StringComparer.OrdinalIgnoreCase).ToList();
             principal.SetAudiences(audiences);
 
             principal.SetDestinations(claim => claim.Type switch

@@ -237,7 +237,7 @@ public static class RegisterEndPoint
                 var clientapp = new ApplicationUserAllowedClientView
                 {
                     UserId = user.Id,
-                    ClientId = "GApplication",
+                    ClientId = "WebClient",
                     IsEnabled = true,
                 };
 

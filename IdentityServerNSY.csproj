@@ -297,4 +297,8 @@
       <Content Include="bin\Release\.DS_Store" />
     </ItemGroup>
 
+    <ItemGroup>
+      <Folder Include="APIView\" />
+    </ItemGroup>
+
 </Project>
