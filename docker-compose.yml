@@ -10,18 +10,23 @@ services:
       dockerfile: Dockerfile
     container_name: nsyidentity
     environment:
-      - DB_CONNECTION_FILE=/run/secrets/db_connection
+      - SERVICE_KEY=IDENTITYNSY
+      - IDENTITYNSYـOPENIDDICT_ISSUER=https://nsyuser.i-myapp.com
       - ASPNETCORE_ENVIRONMENT=Production
       - IS_DOCKER=true
-      - ASPNETCORE_URLS=http://+:5015
+      - ASPNETCORE_URLS=http://+:8080
+    
+    ports:
+      - "5015:8080"
     secrets:
-      - db_connection
+      #- db_connection
+      - app_secrets
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.nsyidentity.rule=Host(`nsyuser.i-myapp.com`)"
       - "traefik.http.routers.nsyidentity.entrypoints=websecure"
       - "traefik.http.routers.nsyidentity.tls.certresolver=myresolver"
-      - "traefik.http.services.nsyidentity.loadbalancer.server.port=5015"
+      - "traefik.http.services.nsyidentity.loadbalancer.server.port=8080"
       - "traefik.http.middlewares.nsyidentity-headers.headers.customrequestheaders.X-Forwarded-Host=nsyuser.i-myapp.com"
     networks:
       - NSY_network
@@ -31,32 +36,42 @@ services:
   # خدمات المايجريشن (dotnet ef database update)
   # ------------------------
 
-  migrator-nsyidentity:
-    image: mcr.microsoft.com/dotnet/sdk:10.0
-    container_name: migrator-nsyidentity
-    working_dir: /src
-    volumes:
-      - ./:/src
-    secrets:
-      - db_connection
+  nidentity:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: nidentity
     environment:
-      - DB_CONNECTION_FILE=/run/secrets/db_connection
-    command: >
-      /bin/sh -c "
-      export DB_CONNECTION=$(cat /run/secrets/db_connection) &&
-      dotnet tool install --global dotnet-ef &&
-      export PATH=\"$PATH:/root/.dotnet/tools\" &&
-      dotnet restore /src/IdentityServerNSY.csproj &&
-      dotnet ef database update --project /src/IdentityServerNSY.csproj --startup-project /src/IdentityServerNSY.csproj
-      "
+      - SERVICE_KEY=IDENTITYNSULTAN
+      - IDENTITYNSULTANـOPENIDDICT_ISSUER=https://nuser.i-myapp.com
+      - ASPNETCORE_ENVIRONMENT=Production
+      - IS_DOCKER=true
+      - ASPNETCORE_URLS=http://+:8080
+    
+    ports:
+      - "5011:8080"
+
+    secrets:
+      - app_secrets
+
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.nidentity.rule=Host(`nuser.i-myapp.com`)"
+      - "traefik.http.routers.nidentity.entrypoints=websecure"
+      - "traefik.http.routers.nidentity.tls.certresolver=myresolver"
+      - "traefik.http.services.nidentity.loadbalancer.server.port=8080"
+      - "traefik.http.middlewares.nidentity-headers.headers.customrequestheaders.X-Forwarded-Host=nuser.i-myapp.com"
     networks:
-      - NSY_network
+      - Sultan_network
+    restart: always
 
 secrets:
-  db_connection:
-    file: ./secrets/db_connection.txt
+  app_secrets:
+    file: /opt/infra/secrets/app_secrets.env
 networks:
   NSY_network:
+    external: true
+  Sultan_network:
     external: true
 
 

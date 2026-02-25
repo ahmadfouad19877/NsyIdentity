@@ -21,25 +21,24 @@ public class UserAllowedClientRep:IUserAllowedClientRep
         _ct = ct;
 
     }
+
     public async Task<IdentityResult> AddUserToClient(ApplicationUserAllowedClientView allowedClient)
     {
         try
         {
-            var user = await _manager.FindByIdAsync(allowedClient.UserId);
-            if (user == null) return IdentityResult.Failed(new IdentityError
+            var ClientAllow=await _db.AllowedClients.FirstOrDefaultAsync(x=>x.ClientId==allowedClient.ClientId&&x.UserId==allowedClient.UserID);
+
+            if (ClientAllow != null)
             {
-                Code = "404",
-                Description = "User not found"
-            });
+                throw new ArgumentException("this ClientID is Add Befoor.", nameof(allowedClient.ClientId));
+            }
             var allow = new ApplicationUserAllowedClient
             {
-                UserId = user.Id,
                 ClientId = allowedClient.ClientId,
-                IsEnabled = true,
-                AllowedAudiences = allowedClient.AllowedAudiences,
+                UserId =   allowedClient.UserID,
+                IsActive = true,
+                
             };
-
-            //allow.AllowedAudiences.AddRange(allowedClient.AllowedAudiences);
             _db.AllowedClients.Add(allow);
             await _db.SaveChangesAsync();
             return IdentityResult.Success;
@@ -50,80 +49,19 @@ public class UserAllowedClientRep:IUserAllowedClientRep
             throw;
         }
     }
-
-    public async Task<IdentityResult> UpdateUserToClient(ApplicationUserAllowedClientView allowedClient)
+    
+    public async Task<IdentityResult> ActiveUserToClient(RequestIDView allowedClient,bool disableClient=false)
     {
         try
         {
-            var allow = await _db.AllowedClients.FindAsync(allowedClient.Id);
-            if (allow == null) throw new ArgumentException("ID is Error.", nameof(allowedClient.Id));
-            if(allow.ClientId == allowedClient.ClientId)throw new ArgumentException("OldClientId is Same New ClientID.", nameof(allowedClient.OldClientId));
-            if(allow.ClientId != allowedClient.OldClientId) throw new ArgumentException("OldClientId is Not Correct.", nameof(allowedClient.OldClientId));
-            var cou=await _db.AllowedClients
-                .Where(x => x.UserId == allowedClient.UserId && x.ClientId == allowedClient.ClientId).CountAsync();
-            if(cou!=0) throw new ArgumentException("This User is have this ClientID.", nameof(allowedClient.OldClientId));
-            await _userSessionRep.RevokeAllExceptAsync(
-                userId: allow.UserId,        // أو null إذا بدك تلغي لكل المستخدمين
-                keepClientId: allowedClient.OldClientId);
-            allow.ClientId = allowedClient.ClientId;
-            await _db.SaveChangesAsync();
-            return IdentityResult.Success;
-        }
-        catch (Exception e)
-        {
-            Console.WriteLine(e);
-            throw;
-        }
-    }
+            var ClientAllow=await _db.AllowedClients.FindAsync(allowedClient.id);
 
-    public async Task<IdentityResult> UpdateUserAudiences(ApplicationUserAllowedAudiencesView allowedAudiences)
-    {
-        var allow = await _db.AllowedClients.FindAsync(allowedAudiences.Id);
-        if (!allowedAudiences.OldAudiences.Equals(null)&&!allow.AllowedAudiences.Contains(allowedAudiences.Audiences))
-        {
-            allow.AllowedAudiences.Remove(allowedAudiences.OldAudiences);
-            allow.AllowedAudiences.Add(allowedAudiences.Audiences);
-        }
-        if (allow.AllowedAudiences.Contains(allowedAudiences.Audiences)&&allowedAudiences.OldAudiences.Equals(null))
-        {
-            throw new ArgumentException("this Audiences is Add Befoor.", nameof(allowedAudiences.Audiences));
-        }
-        allow.AllowedAudiences.Add(allowedAudiences.Audiences);
-        await _db.SaveChangesAsync();
-        return IdentityResult.Success;
-    }
-
-    public async Task<IdentityResult> DeleteUserToClient(Guid ID)
-    {
-        try
-        {
-            var allow = await _db.AllowedClients.FindAsync(ID);
-            if (allow == null) throw new ArgumentException("ID is Error.", nameof(ID));
-            await _userSessionRep.RevokeAllExceptAsync(
-                userId: allow.UserId,      // أو null إذا لكل المستخدمين
-                keepClientId: allow.ClientId,ct:_ct);
-            _db.AllowedClients.Remove(allow);
-            await _db.SaveChangesAsync();
-            return IdentityResult.Success;
-        }
-        catch (Exception e)
-        {
-            Console.WriteLine(e);
-            throw;
-        }
-    }
-
-    public async Task<IdentityResult> DisableUser(Guid ID)
-    {
-        try
-        {
-            var allow = await _db.AllowedClients.FindAsync(ID);
-            if (allow == null) return IdentityResult.Failed(new IdentityError
+            if (ClientAllow == null)
             {
-                Code = "404",
-                Description = "Allow not found"
-            });
-            allow.IsEnabled = false;
+                throw new ArgumentException("this ClientID is Not Add Befoor.", nameof(allowedClient.id));
+            }
+            ClientAllow.IsActive=disableClient;
+            _db.AllowedClients.Update(ClientAllow);
             await _db.SaveChangesAsync();
             return IdentityResult.Success;
         }
@@ -134,58 +72,13 @@ public class UserAllowedClientRep:IUserAllowedClientRep
         }
     }
 
-    public async Task<IdentityResult> EnableUser(Guid ID)
+    public async Task<IEnumerable<ApplicationUserAllowedClient>> ListForClient(string clientId)
     {
-        try
-        {
-            var allow = await _db.AllowedClients.FindAsync(ID);
-            if (allow == null) return IdentityResult.Failed(new IdentityError
-            {
-                Code = "404",
-                Description = "Allow not found"
-            });
-            allow.IsEnabled = true;
-            await _db.SaveChangesAsync();
-            return IdentityResult.Success;
-        }
-        catch (Exception e)
-        {
-            Console.WriteLine(e);
-            throw;
-        }
-    }
-
-    public async Task<IdentityResult> DeleteAllUserClient(string UserID)
-    {
-        try
-        {
-            var list = await _db.AllowedClients.Where(x => x.UserId == UserID).ToListAsync();
-            _db.AllowedClients.RemoveRange(list);
-            await _userSessionRep.RevokeAllForUserAsync(UserID,_ct);
-            await _db.SaveChangesAsync();
-            return IdentityResult.Success;
-        }
-        catch (Exception e)
-        {
-            Console.WriteLine(e);
-            throw;
-        }
+        return await _db.AllowedClients.Include(x=>x.User).OrderBy(x=>x.ClientId).Where(x=>x.ClientId==clientId).ToListAsync();
     }
 
     public async Task<IEnumerable<ApplicationUserAllowedClient>> ListForUser(string UserID)
     {
-        return await _db.AllowedClients.Where(x => x.UserId == UserID&&x.IsEnabled).ToListAsync();
+        return await _db.AllowedClients.Include(x=>x.User).OrderBy(x => x.ClientId).Where(x=>x.UserId==UserID).ToListAsync();
     }
-
-    public async Task<IEnumerable<ApplicationUser>> ListForClient(string ClientID)
-    {
-        var users = await _db.AllowedClients
-            .Where(x => x.ClientId == ClientID)
-            .Select(x => x.User)   // Navigation Property
-            .Distinct()
-            .ToListAsync();
-
-        return users;
-    }
-    
 }

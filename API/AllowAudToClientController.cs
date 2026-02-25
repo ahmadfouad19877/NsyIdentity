@@ -9,23 +9,21 @@ namespace IdentityServerNSY.API
     [Route("api")]
     [ApiController]
     [Authorize(Policy = "SuperAdmin")]
-    public class AllowClientIdToUserController : ControllerBase
+    public class AllowAudToClientController : ControllerBase
     {
-        private readonly IUserAllowedClientRep _clientIdRep;
-        
+        private readonly IClientAllowedAud _clientAllowedAud;
 
-        public AllowClientIdToUserController(IUserAllowedClientRep clientIdRep)
+        public AllowAudToClientController(IClientAllowedAud clientAllowedAud)
         {
-            _clientIdRep = clientIdRep;
-            
+            _clientAllowedAud = clientAllowedAud;
         }
         [HttpPost]
-        [Route("AddUserToClient")]
-        public async Task<IActionResult> AddClientId(ApplicationUserAllowedClientView model)
+        [Route("AddAudToClient")]
+        public async Task<IActionResult> AddClientId(ApplicationCientAllowedAudiencesView model)
         {
             try
             {
-                var data = await _clientIdRep.AddUserToClient(model);
+                var data = await _clientAllowedAud.AddClientToAudiences(model);
                 if (data.Succeeded)
                 {
                     return StatusCode(200, new
@@ -50,12 +48,42 @@ namespace IdentityServerNSY.API
         }
         
         [HttpPost]
-        [Route("DisableUserToClient")]
+        [Route("UpdateAudToClient")]
+        public async Task<IActionResult> UpdateAudToClient(ApplicationCientAllowedAudiencesView model)
+        {
+            try
+            {
+                var data = await _clientAllowedAud.UpdateClientToAudiences(model);
+                if (data.Succeeded)
+                {
+                    return StatusCode(200, new
+                    {
+                        status = true
+                    });
+                }
+                return StatusCode(402, new
+                {
+                    status = false,
+                    data.Errors
+                }); 
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new
+                {
+                    status = false,
+                    result = ex.ToString()
+                });
+            }
+        }
+        
+        [HttpPost]
+        [Route("DisableAudToClient")]
         public async Task<IActionResult> DisableUser(RequestIDView model)
         {
             try
             {
-                var data = await _clientIdRep.ActiveUserToClient(model);
+                var data = await _clientAllowedAud.DisableClientIDToAudiences(model);
                 if (data.Succeeded)
                 {
                     return StatusCode(200, new
@@ -79,12 +107,12 @@ namespace IdentityServerNSY.API
             }
         }
         [HttpPost]
-        [Route("EnableUserToClient")]
+        [Route("EnableAudToClient")]
         public async Task<IActionResult> EnableUser(RequestIDView model)
         {
             try
             {
-                var data = await _clientIdRep.ActiveUserToClient(model,true);
+                var data = await _clientAllowedAud.DisableClientIDToAudiences(model, true);
                 if (data.Succeeded)
                 {
                     return StatusCode(200, new
@@ -109,34 +137,12 @@ namespace IdentityServerNSY.API
         }
         
         [HttpPost]
-        [Route("ListForUser")]
+        [Route("ListAudForClient")]
         public async Task<IActionResult> ListForUser(RequestIDView model)
         {
             try
             {
-                var data = await _clientIdRep.ListForUser(model.UserID);
-                return StatusCode(200, new
-                {
-                    status = true,
-                    data
-                }); 
-            }
-            catch (Exception ex)
-            {
-                return StatusCode(500, new
-                {
-                    status = false,
-                    result = ex.ToString()
-                });
-            }
-        }
-        [HttpPost]
-        [Route("ListForClient")]
-        public async Task<IActionResult> ListForClient(RequestIDView model)
-        {
-            try
-            {
-                var data = await _clientIdRep.ListForClient(model.ClientID);
+                var data = await _clientAllowedAud.ListForClient(model.ClientID);
                 return StatusCode(200, new
                 {
                     status = true,

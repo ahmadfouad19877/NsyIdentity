@@ -236,7 +236,7 @@ public static class RegisterEndPoint
 
                 var clientapp = new ApplicationUserAllowedClientView
                 {
-                    UserId = user.Id,
+                    UserID = user.Id,
                     ClientId = "WebClient",
                     IsEnabled = true,
                 };

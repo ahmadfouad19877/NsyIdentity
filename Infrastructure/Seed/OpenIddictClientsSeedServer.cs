@@ -27,7 +27,7 @@ public static class OpenIddictClientsSeedServer
             {
                 UserId = user!.Id,
                 ClientId = "PostmanLocal",
-                IsEnabled = true,
+                IsActive = true,
             };
             db.AllowedClients.Add(allow);
             await db.SaveChangesAsync();

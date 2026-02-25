@@ -1,22 +1,44 @@
-obj/
+####################################
+# Build
+####################################
 bin/
-logs/
-.vs/
-.idea/
-*.user
-*.swp
-.env
-*.env
-*.lock.json
-*.log
-*.DS_Store
-.DS_Store
-*.db
-TestResults/
-coverage/
-publish/
+obj/
 
+####################################
+# Rider / VS / VSCode
+####################################
+.idea/
+.vscode/
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+
+####################################
+# OS
+####################################
+.DS_Store
+Thumbs.db
+
+####################################
+# Logs
+####################################
+*.log
+
+####################################
+# Secrets (الأهم)
+####################################
 appsettings.Development.json
 appsettings.Local.json
 secrets/
 *.env
+
+####################################
+# Docker override
+####################################
+docker-compose.override.yml
+
+####################################
+# EF migrations temp files
+####################################
+*.db

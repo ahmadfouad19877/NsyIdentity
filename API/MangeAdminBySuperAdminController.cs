@@ -96,9 +96,8 @@ namespace IdentityServer.API
                     }
                     var clientapp = new ApplicationUserAllowedClientView
                     {
-                        UserId = UserAdded.Id,
+                        UserID = UserAdded.Id,
                         ClientId = model.ClientID,
-                        AllowedAudiences = model.AllowedAudiences,
                         IsEnabled = true,
                     };
                     var addUserToClient = await _allowedClient.AddUserToClient(clientapp);

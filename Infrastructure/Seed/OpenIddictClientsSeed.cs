@@ -7,16 +7,15 @@ public static class OpenIddictClientsSeed
 {
     public static async Task SeedAsync(IServiceProvider services)
     {
-        Console.WriteLine("Seeding OpenIddict Clients...Local");
+        Console.WriteLine("Seeding OpenIddict Clients...Server");
         using var scope = services.CreateScope();
         var manager = scope.ServiceProvider.GetRequiredService<IOpenIddictApplicationManager>();
         var userManager = scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
         var db = scope.ServiceProvider.GetRequiredService<ApplicationDb>();
-        //var app= await manager.FindByClientIdAsync("PostmanLocal");
-       // var client = await manager.GetClientIdAsync(app);
+        var app= await manager.FindByClientIdAsync("PostmanLocal");
         
         
-        if (false)
+        if (app is null)
         {
             
             await EnsureClient(manager,
@@ -27,9 +26,9 @@ public static class OpenIddictClientsSeed
             var user = await userManager.FindByNameAsync("superadmin");
             var allow = new ApplicationUserAllowedClient
             {
-                UserId = user.Id,
+                UserId = user!.Id,
                 ClientId = "PostmanLocal",
-                IsEnabled = true,
+                IsActive = true,
             };
             db.AllowedClients.Add(allow);
             await db.SaveChangesAsync();

@@ -205,7 +205,7 @@ public static class AccountEndpoints
             var isAllowed = await db.AllowedClients.AnyAsync(x =>
                 x.UserId == userId &&
                 x.ClientId == clientId &&
-                x.IsEnabled);
+                x.IsActive);
 
             if (!isAllowed)
             {
@@ -242,19 +242,23 @@ public static class AccountEndpoints
             principal.SetScopes(request.GetScopes());
 
             // ✅ حل LastOrDefaultAsync: لازم OrderBy محدد
-            var allow = await db.AllowedClients
+            var allow = await db.AllowedAudiences
                 .AsNoTracking()
-                .Where(x => x.IsEnabled && x.ClientId == clientId && x.UserId == userId)
-                .OrderByDescending(x => x.CreatedAt)
-                .FirstOrDefaultAsync();
+                .Where(x => x.IsActive && x.ClientId == clientId)
+                .OrderByDescending(x => x.CreatedAtUtc)
+                .ToListAsync();
 
             // ✅ Audiences
             var audiences = new List<string>();
-            audiences.Add("ItemPrice");
-            if (allow?.AllowedAudiences?.Count > 0)
-                audiences.AddRange(allow.AllowedAudiences);
+            //audiences.Add("ItemPrice");
+            if (allow.Count > 0)
+              audiences.AddRange(
+                allow
+                  .Where(x => !string.IsNullOrWhiteSpace(x.Audience))
+                  .Select(x => x.Audience)
+              );
             // remove duplicates
-            audiences = audiences.Distinct(StringComparer.OrdinalIgnoreCase).ToList();
+            //audiences = audiences.Distinct(StringComparer.OrdinalIgnoreCase).ToList();
             principal.SetAudiences(audiences);
 
             principal.SetDestinations(claim => claim.Type switch

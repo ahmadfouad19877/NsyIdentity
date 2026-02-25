@@ -11,7 +11,8 @@ namespace IdentityServer.Models
         public DbSet<ApplicationUserAllowedClient> AllowedClients { get; set; }
         public DbSet<ApplicationUserSessions> UserSessions { get; set; }
         
-
+        public DbSet<ApplicationClientAllowedAudience> AllowedAudiences { get; set; }
+        
         protected override void OnModelCreating(ModelBuilder builder)
         {
             base.OnModelCreating(builder);
