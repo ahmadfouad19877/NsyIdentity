@@ -300,5 +300,14 @@
     <ItemGroup>
       <Folder Include="APIView\" />
     </ItemGroup>
+    <ItemGroup>
+      <!-- Prevent any imported targets from trying to include resx files -->
+      <EmbeddedResource Remove="**/*.resx" />
+      <EmbeddedResource Remove="**\*.resx" />
+      <Content Remove="**/*.resx" />
+      <Content Remove="**\*.resx" />
+      <None Remove="**/*.resx" />
+      <None Remove="**\*.resx" />
+    </ItemGroup>
 
 </Project>

@@ -11,7 +11,8 @@ services:
     container_name: nsyidentity
     environment:
       - SERVICE_KEY=IDENTITYNSY
-      - IDENTITYNSYـOPENIDDICT_ISSUER=https://nsyuser.i-myapp.com
+      - APP_SECRETS_FILE=/run/secrets/app_secrets
+      - IDENTITYNSY_OPENIDDICT_ISSUER=https://nsyuser.i-myapp.com
       - ASPNETCORE_ENVIRONMENT=Production
       - IS_DOCKER=true
       - ASPNETCORE_URLS=http://+:8080
@@ -43,7 +44,8 @@ services:
     container_name: nidentity
     environment:
       - SERVICE_KEY=IDENTITYNSULTAN
-      - IDENTITYNSULTANـOPENIDDICT_ISSUER=https://nuser.i-myapp.com
+      - APP_SECRETS_FILE=/run/secrets/app_secrets
+      - IDENTITYNSULTAN_OPENIDDICT_ISSUER=https://nuser.i-myapp.com
       - ASPNETCORE_ENVIRONMENT=Production
       - IS_DOCKER=true
       - ASPNETCORE_URLS=http://+:8080
