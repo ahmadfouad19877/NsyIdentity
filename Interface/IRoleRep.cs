@@ -1,8 +1,8 @@
 ﻿using System;
-using IdentityServer.Models;
-using IdentityServer.ModelView;
+using IdentityServerNSY.Models;
+using IdentityServerNSY.ModelView;
 
-namespace IdentityServer.Interface
+namespace IdentityServerNSY.Interface
 {
     public interface IRoleRep
     {

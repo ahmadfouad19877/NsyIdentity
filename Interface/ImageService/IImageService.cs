@@ -1,4 +1,4 @@
-namespace IdentityServer.Interface.ImageService;
+namespace IdentityServerNSY.Interface.ImageService;
 
 public interface IImageService
 {

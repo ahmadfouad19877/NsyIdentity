@@ -1,16 +1,15 @@
 using System.Text;
-using IdentityServer.Interface;
-using IdentityServer.Models;
-using IdentityServer.ModelView;
+using IdentityServerNSY.Interface;
+using IdentityServerNSY.Models;
+using IdentityServerNSY.ModelView;
 using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.EntityFrameworkCore;
 using OpenIddict.Abstractions;
 
-namespace IdentityServer.API
+namespace IdentityServerNSY.API
 {
     [Route("api")]
     [ApiController]

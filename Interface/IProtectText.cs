@@ -1,4 +1,4 @@
-namespace IdentityServer.Interface;
+namespace IdentityServerNSY.Interface;
 
 public interface IProtectText
 {

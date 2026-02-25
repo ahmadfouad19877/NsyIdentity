@@ -1,10 +1,8 @@
 using System.Security.Claims;
-using IdentityServer.Models;
+using IdentityServerNSY.Models;
 using Microsoft.AspNetCore.Authentication;
-using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using OpenIddict.Abstractions;
-using OpenIddict.Server.AspNetCore;
 
 namespace IdentityServerNSY.account;
 

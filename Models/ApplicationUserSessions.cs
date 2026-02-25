@@ -1,7 +1,7 @@
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
-namespace IdentityServer.Models;
+namespace IdentityServerNSY.Models;
 
 public class ApplicationUserSessions
 {

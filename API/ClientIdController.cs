@@ -1,7 +1,6 @@
-using IdentityServer.Interface;
-using IdentityServer.ModelView;
+using IdentityServerNSY.Interface;
+using IdentityServerNSY.ModelView;
 using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 
 namespace IdentityServerNSY.API

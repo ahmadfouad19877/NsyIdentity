@@ -1,8 +1,8 @@
 using System.Collections;
-using IdentityServer.ModelView;
+using IdentityServerNSY.ModelView;
 using Microsoft.AspNetCore.Identity;
 
-namespace IdentityServer.Interface;
+namespace IdentityServerNSY.Interface;
 
 public interface IClientIdRep
 {

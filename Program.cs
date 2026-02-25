@@ -1,8 +1,8 @@
 ﻿using System.Text;
-using IdentityServer.Interface;
-using IdentityServer.Interface.ImageService;
-using IdentityServer.Middleware;
-using IdentityServer.Models;
+using IdentityServerNSY.Interface;
+using IdentityServerNSY.Interface.ImageService;
+using IdentityServerNSY.Middleware;
+using IdentityServerNSY.Models;
 using IdentityServerNSY.account;
 using IdentityServerNSY.Infrastructure.Seed;
 using IdentityServerNSY.Security.Sherd;

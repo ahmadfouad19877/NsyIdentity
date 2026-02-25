@@ -1,9 +1,9 @@
 using System.Security.Claims;
-using IdentityServer.Models;
+using IdentityServerNSY.Models;
 using Microsoft.EntityFrameworkCore;
 using OpenIddict.Abstractions;
 
-namespace IdentityServer.Middleware;
+namespace IdentityServerNSY.Middleware;
 
 public sealed class SessionValidationMiddleware
 {

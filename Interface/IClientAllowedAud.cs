@@ -1,8 +1,8 @@
-using IdentityServer.Models;
-using IdentityServer.ModelView;
+using IdentityServerNSY.Models;
+using IdentityServerNSY.ModelView;
 using Microsoft.AspNetCore.Identity;
 
-namespace IdentityServer.Interface;
+namespace IdentityServerNSY.Interface;
 
 public interface IClientAllowedAud
 {

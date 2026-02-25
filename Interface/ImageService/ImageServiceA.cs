@@ -3,7 +3,7 @@ using Amazon.S3;
 using Amazon.S3.Model;
 using Amazon.S3.Transfer;
 
-namespace IdentityServer.Interface.ImageService;
+namespace IdentityServerNSY.Interface.ImageService;
 
 public class ImageService:IImageService
 {

@@ -1,7 +1,7 @@
 ﻿using System;
 using Microsoft.AspNetCore.Identity;
 
-namespace IdentityServer.Models
+namespace IdentityServerNSY.Models
 {
     public class ApplicationRole : IdentityRole
     {

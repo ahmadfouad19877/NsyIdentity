@@ -1,6 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 
-namespace IdentityServer.ModelView;
+namespace IdentityServerNSY.ModelView;
 
 public class ApplicationAdminUserView
 {

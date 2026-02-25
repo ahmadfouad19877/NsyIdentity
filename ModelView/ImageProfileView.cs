@@ -1,5 +1,5 @@
 ﻿using System;
-namespace IdentityServer.ModelView
+namespace IdentityServerNSY.ModelView
 {
     public class ImageProfileView
     {

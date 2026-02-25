@@ -2,7 +2,7 @@ using System.Security.Cryptography;
 using System.Text;
 using Microsoft.AspNetCore.DataProtection;
 
-namespace IdentityServer.Interface;
+namespace IdentityServerNSY.Interface;
 
 public class ProtectText:IProtectText
 {

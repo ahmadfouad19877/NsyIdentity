@@ -1,8 +1,8 @@
 using System.Net;
 using System.Text.RegularExpressions;
-using IdentityServer.Interface;
-using IdentityServer.Models;
-using IdentityServer.ModelView;
+using IdentityServerNSY.Interface;
+using IdentityServerNSY.Models;
+using IdentityServerNSY.ModelView;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 

@@ -1,10 +1,10 @@
-using IdentityServer.Models;
-using IdentityServer.ModelView;
+using IdentityServerNSY.Models;
+using IdentityServerNSY.ModelView;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using OpenIddict.Abstractions;
 
-namespace IdentityServer.Interface;
+namespace IdentityServerNSY.Interface;
 
 public class UserSessionRep: IUserSessionRep
 {

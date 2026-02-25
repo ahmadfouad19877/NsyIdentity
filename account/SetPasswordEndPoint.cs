@@ -1,5 +1,5 @@
 using System.Net;
-using IdentityServer.Models;
+using IdentityServerNSY.Models;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.WebUtilities;
 

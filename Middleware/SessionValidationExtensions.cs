@@ -1,4 +1,4 @@
-namespace IdentityServer.Middleware;
+namespace IdentityServerNSY.Middleware;
 
 public static class SessionValidationExtensions
 {

@@ -1,11 +1,11 @@
-using IdentityServer.Models;
+using IdentityServerNSY.Models;
 using Microsoft.AspNetCore;
 using Microsoft.EntityFrameworkCore;
 using OpenIddict.Abstractions;
 using OpenIddict.Server;
 using static OpenIddict.Server.OpenIddictServerEvents;
 
-namespace IdentityServer.OpenIddict.Handlers;
+namespace IdentityServerNSY.OpenIddict.Handlers;
 
 public sealed class RefreshTokenSessionHandler : IOpenIddictServerHandler<ApplyTokenResponseContext>
 {

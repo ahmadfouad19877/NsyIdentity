@@ -1,9 +1,9 @@
-using IdentityServer.Models;
-using IdentityServer.ModelView;
+using IdentityServerNSY.Models;
+using IdentityServerNSY.ModelView;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 
-namespace IdentityServer.Interface;
+namespace IdentityServerNSY.Interface;
 
 public class UserAllowedClientRep:IUserAllowedClientRep
 {

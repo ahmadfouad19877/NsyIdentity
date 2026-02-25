@@ -1,4 +1,4 @@
-using IdentityServer.Models;
+using IdentityServerNSY.Models;
 using Microsoft.AspNetCore;
 using Microsoft.EntityFrameworkCore;
 using OpenIddict.Abstractions;
