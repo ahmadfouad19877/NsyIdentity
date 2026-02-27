@@ -30,6 +30,7 @@ public static class RegisterEndPoint
         app.MapPost("/account/register", async (
             HttpContext http,
             UserManager<ApplicationUser> userManager,
+            RoleManager<ApplicationRole> roleManager,
             IUserAllowedClientRep _allowedClient
         ) =>
         {
@@ -224,7 +225,16 @@ public static class RegisterEndPoint
             // ✅ Role + Client app
             try
             {
-                var addRole = await userManager.AddToRoleAsync(user, "User");
+                var role = await roleManager.FindByNameAsync("User");
+                if (role is null)
+                {
+                  await userManager.DeleteAsync(user);
+                  return Results.Content(
+                    BuildRegisterHtml(values.ReturnUrl, null, "role_missing", "Role 'User' not found.", values),
+                    "text/html; charset=utf-8");
+                }
+
+                var addRole = await userManager.AddToRoleAsync(user, role.Name);
                 if (!addRole.Succeeded)
                 {
                     var msg = string.Join(" ", addRole.Errors.Select(e => e.Description));
