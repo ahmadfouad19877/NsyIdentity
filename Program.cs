@@ -42,17 +42,61 @@ var allowedOrigins = allowedOriginsRaw
     .Distinct(StringComparer.OrdinalIgnoreCase)
     .ToArray();
 
+// هذه هي الدومينات اللي بدك تسمح فيها + كل subdomains تبعها
+var allowedRootDomains = new[]
+{
+    "i-myapp.com",
+    "sultan.jewelry",
+    "sultanaix.com",
+    "sultanaz.com"
+};
+
+static bool IsAllowedOrigin(string origin, string[] allowedOrigins, string[] allowedRootDomains)
+{
+    Console.WriteLine($"CORS origin received: '{origin}'");
+    if (string.IsNullOrWhiteSpace(origin))
+        return false;
+
+    if (!Uri.TryCreate(origin, UriKind.Absolute, out var uri))
+        return false;
+
+    var host = uri.Host;
+
+    // ✅ Allow specific localhost ports (DEV)
+    if (host.Equals("localhost", StringComparison.OrdinalIgnoreCase) &&
+        (uri.Port == 3000 || uri.Port == 3001 || uri.Port == 5173))
+    {
+        return true;
+    }
+
+    // ✅ Exact match list from ALLOWED_ORIGINS (e.g. https://something.com)
+    if (allowedOrigins.Contains(origin, StringComparer.OrdinalIgnoreCase))
+        return true;
+
+    // ✅ Allow root domains + subdomains
+    foreach (var root in allowedRootDomains)
+    {
+        if (host.Equals(root, StringComparison.OrdinalIgnoreCase) ||
+            host.EndsWith("." + root, StringComparison.OrdinalIgnoreCase))
+        {
+            return true;
+        }
+    }
+
+    return false;
+}
+
 builder.Services.AddCors(options =>
 {
     options.AddPolicy(CorsPolicyName, policy =>
     {
-        policy.WithOrigins(allowedOrigins)
+        policy
+            .SetIsOriginAllowed(origin => IsAllowedOrigin(origin, allowedOrigins, allowedRootDomains))
             .AllowAnyHeader()
             .AllowAnyMethod()
             .AllowCredentials();
     });
 });
-
 //
 // ============================
 // 3) Connection String (ENV -> Docker Secret File -> appsettings)
@@ -380,6 +424,8 @@ app.MapSetPasswordEndpoints();
 
 app.MapControllers();
 
-app.MapGet("/", () => "Hello from IdentityApp!");
+//app.MapGet("/", () => "Hello from IdentityApp!");
+app.MapGet("/", () => "Hello from IdentityApp!")
+    .RequireCors("AppCors");
 
 app.Run();
