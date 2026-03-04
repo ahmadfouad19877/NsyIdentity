@@ -74,14 +74,6 @@ namespace IdentityServerNSY.API
                         result = "This ClientID Not registered In  System"
                     });
                 }
-                if (model.AllowedAudiences.Count == 0)
-                {
-                    return StatusCode(400, new
-                    {
-                        status = false,
-                        result = "This AllowedAudiences Nedded In  System"
-                    });
-                }
                 var result = await _mangeUserBySuperAdmin.AddNewAdmin(model);
                 if (result.Succeeded)
                 {
