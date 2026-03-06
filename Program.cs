@@ -49,7 +49,8 @@ var allowedRootDomains = new[]
     "sultan.jewelry",
     "sultanaix.com",
     "sultanaz.com",
-    "al-sultan-auth-service.vercel.app"
+    "al-sultan-auth-service.vercel.app",
+    "al-sultan-dashboards-admins.vercel.app"
 };
 
 static bool IsAllowedOrigin(string origin, string[] allowedOrigins, string[] allowedRootDomains)
