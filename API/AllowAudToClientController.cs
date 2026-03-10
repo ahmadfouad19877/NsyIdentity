@@ -137,6 +137,36 @@ namespace IdentityServerNSY.API
         }
         
         [HttpPost]
+        [Route("DeleteAudToClient")]
+        public async Task<IActionResult> Delete(RequestIDView model)
+        {
+            try
+            {
+                var data = await _clientAllowedAud.DeleteClientIDToAudiences(model, true);
+                if (data.Succeeded)
+                {
+                    return StatusCode(200, new
+                    {
+                        status = true
+                    });
+                }
+                return StatusCode(402, new
+                {
+                    status = false,
+                    data.Errors
+                }); 
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new
+                {
+                    status = false,
+                    result = ex.ToString()
+                });
+            }
+        }
+        
+        [HttpPost]
         [Route("ListAudForClient")]
         public async Task<IActionResult> ListForUser(RequestIDView model)
         {

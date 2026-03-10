@@ -79,6 +79,18 @@ public class ClientAllowedAud: IClientAllowedAud
         return IdentityResult.Success;
     }
 
+    public async Task<IdentityResult> DeleteClientIDToAudiences(RequestIDView allowedClient, bool disableClient = false)
+    {
+        var allow = await _db.AllowedAudiences.FindAsync(allowedClient.id);
+        if (allow == null)
+        {
+            throw new ArgumentException("this ClientId is Not Add Befoor.", nameof(allowedClient.id));
+        }
+        _db.AllowedAudiences.Remove(allow);
+        await _db.SaveChangesAsync();
+        return IdentityResult.Success;
+    }
+
     public async Task<IEnumerable<ApplicationClientAllowedAudience>> ListForClient(string clientId)
     {
         return await _db.AllowedAudiences.OrderBy(x=>x.Audience).Where(x=>x.ClientId==clientId).ToListAsync();
