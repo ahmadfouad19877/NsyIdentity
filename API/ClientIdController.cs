@@ -181,5 +181,51 @@ namespace IdentityServerNSY.API
                 });
             }
         }
+        
+        [HttpGet]
+        [Route("ListUserClientId")]
+        public async Task<IActionResult> ListClient1()
+        {
+            try
+            {
+                var data = await _clientIdRep.GetClientsWithoutIntrospectionAsync();
+                return StatusCode(200, new
+                {
+                    status = true,
+                    data
+                }); 
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new
+                {
+                    status = false,
+                    result = ex.ToString()
+                });
+            }
+        }
+        [HttpGet]
+        [Route("ListServerClientId")]
+        public async Task<IActionResult> ListServerClient()
+        {
+            try
+            {
+                var data = await _clientIdRep.GetClientsWithIntrospectionAsync();
+                return StatusCode(200, new
+                {
+                    status = true,
+                    data
+                }); 
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new
+                {
+                    status = false,
+                    result = ex.ToString()
+                });
+            }
+        }
+        
     }
 }

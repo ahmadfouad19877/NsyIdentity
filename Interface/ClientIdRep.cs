@@ -191,6 +191,43 @@ public class ClientIdRep: IClientIdRep
 
         return list;
     }
+    
+    public async Task<List<string>> GetClientsWithIntrospectionAsync()
+    {
+        var result = new List<string>();
+
+        await foreach (var app in _manager.ListAsync())
+        {
+            var permissions = await _manager.GetPermissionsAsync(app);
+
+            if (permissions.Contains(OpenIddictConstants.Permissions.Endpoints.Introspection))
+            {
+                var clientId = await _manager.GetClientIdAsync(app);
+                if (!string.IsNullOrWhiteSpace(clientId))
+                    result.Add(clientId);
+            }
+        }
+
+        return result;
+    }
+
+    public async Task<List<string>> GetClientsWithoutIntrospectionAsync()
+    {
+        var result = new List<string>();
+
+        await foreach (var app in _manager.ListAsync())
+        {
+            var permissions = await _manager.GetPermissionsAsync(app);
+
+            if (!permissions.Contains(OpenIddictConstants.Permissions.Endpoints.Introspection))
+            {
+                var clientId = await _manager.GetClientIdAsync(app);
+                if (!string.IsNullOrWhiteSpace(clientId))
+                    result.Add(clientId);
+            }
+        }
+        return result;
+    }
 
     private static async Task EnsurePublicClient(
         IOpenIddictApplicationManager manager,

@@ -17,4 +17,7 @@ public interface IClientIdRep
     Task<OpenIdClientDto> GetClient(string clientId);
     
     Task<List<OpenIdClientDto>> ListClient();
+
+    Task<List<string>> GetClientsWithIntrospectionAsync();
+    Task<List<string>> GetClientsWithoutIntrospectionAsync();
 }
