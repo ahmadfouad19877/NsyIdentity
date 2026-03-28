@@ -17,12 +17,21 @@ public static class AccountEndpoints
         // =========================
         // GET: /account/login
         // =========================
-        app.MapGet("/account/login", (string? returnUrl, string? ok, string? err) =>
+        app.MapGet("/account/login", async (HttpContext http, string? returnUrl, string? ok, string? err) =>
         {
-            returnUrl = string.IsNullOrWhiteSpace(returnUrl) ? "/" : returnUrl;
+          // عربي: أول ما يفتح صفحة login، امسح أي session/cookie قديمة
+          // English: Clear any old session/cookie before showing login page
+          http.Session.Clear();
+          await http.SignOutAsync(IdentityConstants.ApplicationScheme);
 
-            var html = BuildLoginHtml(returnUrl, ok, err);
-            return Results.Content(html, "text/html; charset=utf-8");
+          http.Response.Headers.CacheControl = "no-store, no-cache, must-revalidate";
+          http.Response.Headers.Pragma = "no-cache";
+          http.Response.Headers.Expires = "0";
+
+          returnUrl = string.IsNullOrWhiteSpace(returnUrl) ? "/" : returnUrl;
+
+          var html = BuildLoginHtml(returnUrl, ok, err);
+          return Results.Content(html, "text/html; charset=utf-8");
         }).AllowAnonymous();
 
 

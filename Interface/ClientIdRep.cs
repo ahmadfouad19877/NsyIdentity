@@ -5,29 +5,29 @@ using OpenIddict.Abstractions;
 
 namespace IdentityServerNSY.Interface;
 
-public class ClientIdRep: IClientIdRep
+public class ClientIdRep : IClientIdRep
 {
     private readonly IServiceScope _scope;
     private readonly IOpenIddictApplicationManager _manager;
-    
 
-
-    public ClientIdRep(IServiceProvider services,IOpenIddictApplicationManager manager)
+    public ClientIdRep(IServiceProvider services, IOpenIddictApplicationManager manager)
     {
         _scope = services.CreateScope();
         _manager = manager;
-        
     }
+
     public async Task<IdentityResult> AddClient(ApplicationClientIdView allowedClient)
     {
         try
         {
-            await EnsurePublicClient(_manager,
+            await EnsurePublicClient(
+                _manager,
                 clientId: allowedClient.clientId,
                 displayName: allowedClient.displayName,
-                redirectUri: allowedClient.redirectUri,
-                Scop:allowedClient.Scop
+                redirectUris: allowedClient.redirectUris,
+                Scop: allowedClient.Scop
             );
+
             return IdentityResult.Success;
         }
         catch (Exception e)
@@ -35,18 +35,19 @@ public class ClientIdRep: IClientIdRep
             Console.WriteLine(e);
             throw;
         }
-        
     }
 
     public async Task<IdentityResult> AddServer(ApplicationServerClientIdView allowedClient)
     {
         try
         {
-            await EnsureServiceClient(_manager,
+            await EnsureServiceClient(
+                _manager,
                 clientId: allowedClient.clientId,
-                clientSecrit:allowedClient.clientSecrit,
-                displayName:allowedClient.DisplayName
+                clientSecrit: allowedClient.clientSecrit,
+                displayName: allowedClient.DisplayName
             );
+
             return IdentityResult.Success;
         }
         catch (Exception e)
@@ -58,10 +59,8 @@ public class ClientIdRep: IClientIdRep
 
     public async Task<IdentityResult> EditeClient(ApplicationClientIdView allowedClient)
     {
-        
         try
         {
-            // 1) Find application by ClientId
             var clientId = await _manager.FindByClientIdAsync(allowedClient.clientId);
             if (clientId == null)
             {
@@ -72,24 +71,23 @@ public class ClientIdRep: IClientIdRep
                 });
             }
 
-            // 2) Populate descriptor from existing app
             var descriptor = new OpenIddictApplicationDescriptor();
             await _manager.PopulateAsync(descriptor, clientId);
 
-            // 3) Modify what you want
             descriptor.DisplayName = allowedClient.displayName;
 
-            // Example: change permissions/scopes safely
-            //descriptor.Permissions.Remove("scp:"+);
-            //descriptor.Permissions.Add("scp:sultan_app_api");
-
-            // Example: redirect uris
             descriptor.RedirectUris.Clear();
-            descriptor.RedirectUris.Add(new Uri(allowedClient.redirectUri));
 
-            // 4) Update
+            foreach (var uri in allowedClient.redirectUris)
+            {
+                if (!string.IsNullOrWhiteSpace(uri))
+                {
+                    descriptor.RedirectUris.Add(new Uri(uri));
+                }
+            }
+
             await _manager.UpdateAsync(clientId, descriptor);
-            
+
             return IdentityResult.Success;
         }
         catch (Exception e)
@@ -103,9 +101,8 @@ public class ClientIdRep: IClientIdRep
     {
         try
         {
-            // 1) Find application by ClientId
-            var DclientId = await _manager.FindByClientIdAsync(clientId);
-            if (DclientId == null)
+            var dClientId = await _manager.FindByClientIdAsync(clientId);
+            if (dClientId == null)
             {
                 return IdentityResult.Failed(new IdentityError
                 {
@@ -113,8 +110,9 @@ public class ClientIdRep: IClientIdRep
                     Description = "Client not found"
                 });
             }
-            await _manager.DeleteAsync(DclientId);
-            
+
+            await _manager.DeleteAsync(dClientId);
+
             return IdentityResult.Success;
         }
         catch (Exception e)
@@ -126,18 +124,17 @@ public class ClientIdRep: IClientIdRep
 
     public async Task<OpenIdClientDto> GetClient(string clientId)
     {
-        
-        var app= await _manager.FindByClientIdAsync(clientId);
+        var app = await _manager.FindByClientIdAsync(clientId);
         var client = await _manager.GetClientIdAsync(app);
+
         if (string.IsNullOrWhiteSpace(client))
             return null;
 
         var permissions = await _manager.GetPermissionsAsync(app);
 
-        // ✅ scopes are stored as permissions like: "scp:profile", "scp:email" ...
         var scopes = permissions
             .Where(p => p.StartsWith(OpenIddictConstants.Permissions.Prefixes.Scope, StringComparison.OrdinalIgnoreCase))
-            .Select(p => p.Substring(OpenIddictConstants.Permissions.Prefixes.Scope.Length)) // remove "scp:"
+            .Select(p => p.Substring(OpenIddictConstants.Permissions.Prefixes.Scope.Length))
             .Where(s => !string.IsNullOrWhiteSpace(s))
             .Distinct()
             .ToList();
@@ -153,7 +150,6 @@ public class ClientIdRep: IClientIdRep
             Scopes = scopes,
             ReturnUrls = redirectUris
         };
-
     }
 
     public async Task<List<OpenIdClientDto>> ListClient()
@@ -168,10 +164,9 @@ public class ClientIdRep: IClientIdRep
 
             var permissions = await _manager.GetPermissionsAsync(app);
 
-            // ✅ scopes are stored as permissions like: "scp:profile", "scp:email" ...
             var scopes = permissions
                 .Where(p => p.StartsWith(OpenIddictConstants.Permissions.Prefixes.Scope, StringComparison.OrdinalIgnoreCase))
-                .Select(p => p.Substring(OpenIddictConstants.Permissions.Prefixes.Scope.Length)) // remove "scp:"
+                .Select(p => p.Substring(OpenIddictConstants.Permissions.Prefixes.Scope.Length))
                 .Where(s => !string.IsNullOrWhiteSpace(s))
                 .Distinct()
                 .ToList();
@@ -191,7 +186,7 @@ public class ClientIdRep: IClientIdRep
 
         return list;
     }
-    
+
     public async Task<List<string>> GetClientsWithIntrospectionAsync()
     {
         var result = new List<string>();
@@ -226,51 +221,58 @@ public class ClientIdRep: IClientIdRep
                     result.Add(clientId);
             }
         }
+
         return result;
     }
 
     private static async Task EnsurePublicClient(
         IOpenIddictApplicationManager manager,
         string clientId,
-        string displayName,
-        string redirectUri,
-        string Scop)
+        string? displayName,
+        List<string> redirectUris,
+        string? Scop)
     {
         if (await manager.FindByClientIdAsync(clientId) is not null)
             return;
 
-        await manager.CreateAsync(new OpenIddictApplicationDescriptor
+        var descriptor = new OpenIddictApplicationDescriptor
         {
             ClientId = clientId,
             DisplayName = displayName,
             ClientType = OpenIddictConstants.ClientTypes.Public,
-            RedirectUris = { new Uri(redirectUri) },
 
             Permissions =
             {
-                // endpoints
                 OpenIddictConstants.Permissions.Endpoints.Authorization,
                 OpenIddictConstants.Permissions.Endpoints.Token,
-                //OpenIddictConstants.Permissions.Endpoints.Introspection,
-                // grant types
+                OpenIddictConstants.Permissions.Endpoints.EndSession,
+
                 OpenIddictConstants.Permissions.GrantTypes.AuthorizationCode,
                 OpenIddictConstants.Permissions.GrantTypes.RefreshToken,
-                // response types
+
                 OpenIddictConstants.Permissions.ResponseTypes.Code,
-                // scopes
-                OpenIddictConstants.Scopes.OpenId,
+
                 OpenIddictConstants.Permissions.Scopes.Profile,
-                OpenIddictConstants.Scopes.OfflineAccess, // ✅ مهم
                 OpenIddictConstants.Permissions.Prefixes.Scope + Scop
             },
 
             Requirements =
             {
-                OpenIddictConstants.Requirements.Features.ProofKeyForCodeExchange // PKCE
+                OpenIddictConstants.Requirements.Features.ProofKeyForCodeExchange
             }
-        });
+        };
+
+        foreach (var uri in redirectUris)
+        {
+            if (!string.IsNullOrWhiteSpace(uri))
+            {
+                descriptor.RedirectUris.Add(new Uri(uri));
+            }
+        }
+
+        await manager.CreateAsync(descriptor);
     }
-    
+
     private static async Task EnsureServiceClient(
         IOpenIddictApplicationManager manager,
         string clientId,
@@ -290,7 +292,6 @@ public class ClientIdRep: IClientIdRep
             {
                 OpenIddictConstants.Permissions.Endpoints.Introspection,
             },
-            
         });
     }
 }

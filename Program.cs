@@ -183,67 +183,67 @@ builder.Services.AddOpenIddict()
 
     // Server: token/authorize/introspect endpoints
     .AddServer(options =>
-    {
-        // Issuer (لازم يطابق الدومين اللي المستخدمين/الـ APIs تعتمد عليه)
-        options.SetIssuer(new Uri(issuer));
+{
+    // Issuer (لازم يطابق الدومين اللي المستخدمين/الـ APIs تعتمد عليه)
+    options.SetIssuer(new Uri(issuer));
 
-        // Endpoints
-        options
-            .SetTokenEndpointUris("/connect/token")
-            .SetAuthorizationEndpointUris("/connect/authorize")
-            .SetIntrospectionEndpointUris("/connect/introspect");
+    // Endpoints
+    options
+        .SetTokenEndpointUris("/connect/token")
+        .SetAuthorizationEndpointUris("/connect/authorize")
+        .SetIntrospectionEndpointUris("/connect/introspect")
+        .SetEndSessionEndpointUris("/connect/logout"); // ✅ أضف هذا
 
-        // Flows
-        options
-            .AllowAuthorizationCodeFlow()
-            .RequireProofKeyForCodeExchange()
-            .AllowRefreshTokenFlow();
+    // Flows
+    options
+        .AllowAuthorizationCodeFlow()
+        .RequireProofKeyForCodeExchange()
+        .AllowRefreshTokenFlow();
 
-        // Scopes
-        options.RegisterScopes(
-            OpenIddictConstants.Scopes.OpenId,
-            OpenIddictConstants.Scopes.Profile,
-            OpenIddictConstants.Scopes.OfflineAccess, // مهم للـ refresh token
-            "local_app_api",
-            "GApplication",
-            "WebApplication"
-        );
+    // Scopes
+    options.RegisterScopes(
+        OpenIddictConstants.Scopes.OpenId,
+        OpenIddictConstants.Scopes.Profile,
+        OpenIddictConstants.Scopes.OfflineAccess,
+        "local_app_api",
+        "GApplication",
+        "WebApplication"
+    );
 
-        // Dev certificates (للتطوير فقط)
-        options
-            .AddDevelopmentEncryptionCertificate()
-            .AddDevelopmentSigningCertificate();
+    // Dev certificates (للتطوير فقط)
+    options
+        .AddDevelopmentEncryptionCertificate()
+        .AddDevelopmentSigningCertificate();
 
-        // ASP.NET Core integration
-        options.UseAspNetCore()
-               .EnableAuthorizationEndpointPassthrough();
-        // ملاحظة: انت كنت حاذف EnableTokenEndpointPassthrough — خليته محذوف فعلاً
+    // ASP.NET Core integration
+    options.UseAspNetCore()
+           .EnableAuthorizationEndpointPassthrough()
+           .EnableEndSessionEndpointPassthrough(); // ✅ أضف هذا
 
-        // Reference tokens (opaque)
-        options.UseReferenceAccessTokens();
-        options.UseReferenceRefreshTokens();
+    // Reference tokens (opaque)
+    options.UseReferenceAccessTokens();
+    options.UseReferenceRefreshTokens();
 
-        // Lifetimes
-        options.SetAccessTokenLifetime(TimeSpan.FromMinutes(15));
-        options.SetRefreshTokenLifetime(TimeSpan.FromDays(30));
+    // Lifetimes
+    options.SetAccessTokenLifetime(TimeSpan.FromMinutes(15));
+    options.SetRefreshTokenLifetime(TimeSpan.FromDays(30));
 
-        // Custom event handlers (حسب مشروعك)
-        options.AddEventHandler<OpenIddictServerEvents.ValidateTokenRequestContext>(b =>
-            b.UseScopedHandler<RequireDeviceHeadersOnTokenRequestHandler>());
+    // Custom event handlers (حسب مشروعك)
+    options.AddEventHandler<OpenIddictServerEvents.ValidateTokenRequestContext>(b =>
+        b.UseScopedHandler<RequireDeviceHeadersOnTokenRequestHandler>());
 
-        options.AddEventHandler<OpenIddictServerEvents.ProcessSignInContext>(b =>
-            b.UseScopedHandler<StoreSessionOnTokenHandler>());
+    options.AddEventHandler<OpenIddictServerEvents.ProcessSignInContext>(b =>
+        b.UseScopedHandler<StoreSessionOnTokenHandler>());
 
-        // Logging بسيط لطلبات introspection (اختياري)
-        options.AddEventHandler<OpenIddictServerEvents.ValidateIntrospectionRequestContext>(b =>
-            b.UseInlineHandler(ctx =>
-            {
-                Console.WriteLine($"INTROSPECT token: {ctx.Request.Token}");
-                Console.WriteLine($"INTROSPECT client_id: {ctx.Request.ClientId}");
-                return default;
-            }));
-    })
-
+    // Logging بسيط لطلبات introspection (اختياري)
+    options.AddEventHandler<OpenIddictServerEvents.ValidateIntrospectionRequestContext>(b =>
+        b.UseInlineHandler(ctx =>
+        {
+            Console.WriteLine($"INTROSPECT token: {ctx.Request.Token}");
+            Console.WriteLine($"INTROSPECT client_id: {ctx.Request.ClientId}");
+            return default;
+        }));
+})
     // Validation: يخلي [Authorize] يشتغل على نفس السيرفر
     .AddValidation(options =>
     {
