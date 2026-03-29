@@ -20,7 +20,7 @@ public static class OpenIddictClientsSeedServer
             await EnsureClient(manager,
                 clientId: "PostmanLocal",
                 displayName: "Postman Local",
-                redirectUri: "https://nsyuser.i-myapp.com/cb"
+                redirectUri: "https://al-sultan-auth-service.vercel.app/callback"
             );
             var user = await userManager.FindByNameAsync("superadmin");
             var allow = new ApplicationUserAllowedClient
@@ -58,6 +58,7 @@ public static class OpenIddictClientsSeedServer
                 // endpoints
                 OpenIddictConstants.Permissions.Endpoints.Authorization,
                 OpenIddictConstants.Permissions.Endpoints.Token,
+                OpenIddictConstants.Permissions.Endpoints.EndSession,
 
                 // grant types
                 OpenIddictConstants.Permissions.GrantTypes.AuthorizationCode,
