@@ -209,15 +209,150 @@ public static class LogoutEndPoint
         // صفحة نجاح بعد تسجيل الخروج
         // =========================================================
         app.MapGet("/logout-success", () =>
-            Results.Content("""
-                            <html>
-                              <body style="font-family:Arial;padding:30px">
-                                <h3>Logged out successfully 🔐</h3>
-                                <p>You can close this page now.</p>
-                              </body>
-                            </html>
-                            """, "text/html")
-        ).AllowAnonymous();
+    Results.Content("""
+        <!DOCTYPE html>
+        <html lang="ar" dir="rtl">
+        <head>
+            <meta charset="UTF-8" />
+            <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+            <title>Logout Success</title>
+        </head>
+        <body style="
+            margin:0;
+            padding:0;
+            font-family:Arial, Helvetica, sans-serif;
+            background:linear-gradient(135deg, #0f172a 0%, #111827 45%, #1e293b 100%);
+            min-height:100vh;
+            display:flex;
+            align-items:center;
+            justify-content:center;
+        ">
+            <div style="
+                width:100%;
+                max-width:460px;
+                margin:24px;
+                background:rgba(255,255,255,0.96);
+                border:1px solid rgba(255,255,255,0.25);
+                border-radius:24px;
+                box-shadow:0 20px 60px rgba(0,0,0,0.28);
+                overflow:hidden;
+            ">
+                <div style="
+                    height:8px;
+                    background:linear-gradient(90deg, #16a34a 0%, #22c55e 50%, #86efac 100%);
+                "></div>
+
+                <div style="padding:36px 30px 30px 30px; text-align:center;">
+                    <div style="
+                        width:84px;
+                        height:84px;
+                        margin:0 auto 22px auto;
+                        border-radius:50%;
+                        background:linear-gradient(135deg, #dcfce7 0%, #bbf7d0 100%);
+                        display:flex;
+                        align-items:center;
+                        justify-content:center;
+                        box-shadow:inset 0 0 0 1px rgba(34,197,94,0.18);
+                    ">
+                        <div style="
+                            width:52px;
+                            height:52px;
+                            border-radius:50%;
+                            background:#16a34a;
+                            color:white;
+                            display:flex;
+                            align-items:center;
+                            justify-content:center;
+                            font-size:28px;
+                            font-weight:bold;
+                        ">✓</div>
+                    </div>
+
+                    <div style="
+                        display:inline-block;
+                        padding:6px 14px;
+                        border-radius:999px;
+                        background:#f0fdf4;
+                        color:#166534;
+                        font-size:12px;
+                        font-weight:bold;
+                        letter-spacing:0.3px;
+                        margin-bottom:18px;
+                    ">
+                        SESSION CLOSED
+                    </div>
+
+                    <h1 style="
+                        margin:0 0 14px 0;
+                        font-size:28px;
+                        color:#0f172a;
+                        line-height:1.4;
+                    ">
+                        تم تسجيل الخروج بنجاح
+                    </h1>
+
+                    <p style="
+                        margin:0 0 10px 0;
+                        font-size:16px;
+                        color:#334155;
+                        line-height:1.9;
+                    ">
+                        لقد قمت بتسجيل الخروج ومغادرة المنصة بشكل آمن وناجح.
+                    </p>
+
+                    <p style="
+                        margin:0 0 26px 0;
+                        font-size:14px;
+                        color:#64748b;
+                        line-height:1.8;
+                    ">
+                        يمكنك الآن إغلاق هذه الصفحة أو العودة للمتابعة عند الحاجة.
+                    </p>
+
+                    <div style="
+                        background:#f8fafc;
+                        border:1px solid #e2e8f0;
+                        border-radius:16px;
+                        padding:14px 16px;
+                        text-align:right;
+                        margin-bottom:24px;
+                    ">
+                        <div style="
+                            font-size:13px;
+                            color:#0f172a;
+                            font-weight:bold;
+                            margin-bottom:6px;
+                        ">
+                            ملاحظة أمان
+                        </div>
+                        <div style="
+                            font-size:13px;
+                            color:#475569;
+                            line-height:1.8;
+                        ">
+                            تم إنهاء الجلسة الحالية بنجاح. للحفاظ على أمان حسابك، تأكد من إغلاق المتصفح إذا كنت تستخدم جهازًا مشتركًا.
+                        </div>
+                    </div>
+
+                    <a href="/" style="
+                        display:inline-block;
+                        text-decoration:none;
+                        background:linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+                        color:white;
+                        padding:14px 28px;
+                        border-radius:14px;
+                        font-size:15px;
+                        font-weight:bold;
+                        box-shadow:0 10px 24px rgba(15,23,42,0.22);
+                    ">
+                        العودة إلى الصفحة الرئيسية
+                    </a>
+                </div>
+            </div>
+        </body>
+        </html>
+    """, "text/html; charset=utf-8")
+).AllowAnonymous();
     }
 
     // =========================================================
