@@ -138,6 +138,54 @@ namespace IdentityServerNSY.API
         }
         
         [HttpPost]
+        [Route("AddAdminRole")]
+        public async Task<IActionResult> AddAdminRole(ApplicationAddRoleAdminView model)
+        {
+            try
+            {
+                var user = await _manager.FindByNameAsync(model.UserName);
+                var role = await _roleManage.FindByNameAsync(model.RoleName);
+                if (user == null)
+                {
+                    return StatusCode(400, new
+                    {
+                        status = false,
+                        result = "Check UserName"
+                    });
+                }
+                if (role == null)
+                {
+                    return StatusCode(400, new
+                    {
+                        status = false,
+                        result = "This role Not registered In  System"
+                    });
+                }
+
+                
+                var result = await _manager.AddToRoleAsync(user,model.RoleName);
+                if (!result.Succeeded)
+                {
+                    throw new ArgumentException("Role Note Added", nameof(model.RoleName));
+                }
+                return StatusCode(200, new
+                {
+                    status = true,
+                    result = user,
+                        
+                });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new
+                {
+                    status = false,
+                    result = ex.ToString()
+                });
+            }
+        }
+        
+        [HttpPost]
         [Route("EditeAdminRole")]
         public async Task<IActionResult> EditeAdminRole(ApplicationEditeRoleAdminView model)
         {
