@@ -25,7 +25,7 @@ public class ClientIdRep : IClientIdRep
                 clientId: allowedClient.clientId,
                 displayName: allowedClient.displayName,
                 redirectUris: allowedClient.redirectUris,
-                Scop: allowedClient.Scop
+                scop: allowedClient.Scop
             );
 
             return IdentityResult.Success;
@@ -230,44 +230,47 @@ public class ClientIdRep : IClientIdRep
         string clientId,
         string? displayName,
         List<string> redirectUris,
-        string? Scop)
+        string? scop)
     {
-        if (await manager.FindByClientIdAsync(clientId) is not null)
-            return;
+        var existing = await manager.FindByClientIdAsync(clientId);
 
         var descriptor = new OpenIddictApplicationDescriptor
         {
             ClientId = clientId,
             DisplayName = displayName,
-            ClientType = OpenIddictConstants.ClientTypes.Public,
-
-            Permissions =
-            {
-                OpenIddictConstants.Permissions.Endpoints.Authorization,
-                OpenIddictConstants.Permissions.Endpoints.Token,
-                OpenIddictConstants.Permissions.Endpoints.EndSession,
-                OpenIddictConstants.Permissions.GrantTypes.AuthorizationCode,
-                OpenIddictConstants.Permissions.GrantTypes.RefreshToken,
-                OpenIddictConstants.Permissions.ResponseTypes.Code,
-                OpenIddictConstants.Permissions.Scopes.Profile,
-                OpenIddictConstants.Permissions.Prefixes.Scope + Scop
-            },
-
-            Requirements =
-            {
-                OpenIddictConstants.Requirements.Features.ProofKeyForCodeExchange
-            }
+            ClientType = OpenIddictConstants.ClientTypes.Public
         };
 
-        foreach (var uri in redirectUris)
+        descriptor.Permissions.Add(OpenIddictConstants.Permissions.Endpoints.Authorization);
+        descriptor.Permissions.Add(OpenIddictConstants.Permissions.Endpoints.Token);
+        descriptor.Permissions.Add(OpenIddictConstants.Permissions.Endpoints.EndSession);
+        descriptor.Permissions.Add(OpenIddictConstants.Permissions.GrantTypes.AuthorizationCode);
+        descriptor.Permissions.Add(OpenIddictConstants.Permissions.GrantTypes.RefreshToken);
+        descriptor.Permissions.Add(OpenIddictConstants.Permissions.ResponseTypes.Code);
+        descriptor.Permissions.Add(OpenIddictConstants.Permissions.Scopes.Profile);
+
+        if (!string.IsNullOrWhiteSpace(scop))
         {
-            if (!string.IsNullOrWhiteSpace(uri))
-            {
-                descriptor.RedirectUris.Add(new Uri(uri));
-            }
+            descriptor.Permissions.Add(OpenIddictConstants.Permissions.Prefixes.Scope + scop);
         }
 
-        await manager.CreateAsync(descriptor);
+        descriptor.Requirements.Add(
+            OpenIddictConstants.Requirements.Features.ProofKeyForCodeExchange);
+
+        foreach (var uri in redirectUris.Where(x => !string.IsNullOrWhiteSpace(x)))
+        {
+            descriptor.RedirectUris.Add(new Uri(uri));
+        }
+
+        if (existing is null)
+        {
+            await manager.CreateAsync(descriptor);
+        }
+        else
+        {
+            await manager.PopulateAsync(descriptor, existing);
+            await manager.UpdateAsync(existing, descriptor);
+        }
     }
 
     private static async Task EnsureServiceClient(

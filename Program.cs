@@ -208,7 +208,8 @@ builder.Services.AddOpenIddict()
         OpenIddictConstants.Scopes.OfflineAccess,
         "local_app_api",
         "GApplication",
-        "WebApplication"
+        "WebApplication",
+        "gold_app"
     );
 
     // Dev certificates (للتطوير فقط)
