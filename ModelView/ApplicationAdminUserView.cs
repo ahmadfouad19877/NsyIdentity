@@ -16,9 +16,6 @@ public class ApplicationAdminUserView
     [Required]
     public String RoleName { get; set; }
     
-    [Required]
-    public List<string> AllowedAudiences { get; set; }
-    
     
 }
 
