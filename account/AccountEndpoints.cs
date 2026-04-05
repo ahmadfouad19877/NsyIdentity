@@ -132,6 +132,204 @@ public static class AccountEndpoints
 
             return Results.Ok(new { code });
         }).AllowAnonymous();
+        
+        
+                // =========================
+        // POST: /connect/token
+        // =========================
+        app.MapPost("/connect/token", async (
+            HttpContext httpContext,
+            IOpenIddictApplicationManager applicationManager,
+            UserManager<ApplicationUser> userManager,
+            ApplicationDb db) =>
+        {
+            // عربي: جلب طلب OpenIddict الحالي
+            // English: Resolve the current OpenIddict request
+            var request = httpContext.GetOpenIddictServerRequest();
+
+            if (request is null)
+            {
+                return Results.BadRequest(new
+                {
+                    error = "invalid_request",
+                    error_description = "The OpenIddict request cannot be resolved."
+                });
+            }
+
+            // =========================================================
+            // 1) Authorization Code / Refresh Token
+            // =========================================================
+            if (request.IsAuthorizationCodeGrantType() || request.IsRefreshTokenGrantType())
+            {
+                // عربي: OpenIddict يكون قد تحقق من الكود أو الريفرش توكن
+                // English: OpenIddict has already validated the code or refresh token
+                var result = await httpContext.AuthenticateAsync(
+                    OpenIddictServerAspNetCoreDefaults.AuthenticationScheme);
+
+                if (!result.Succeeded || result.Principal is null)
+                {
+                    return Results.Forbid(
+                        authenticationSchemes: new[]
+                        {
+                            OpenIddictServerAspNetCoreDefaults.AuthenticationScheme
+                        },
+                        properties: new AuthenticationProperties(new Dictionary<string, string?>
+                        {
+                          [OpenIddictServerAspNetCoreConstants.Properties.Error] = OpenIddictConstants.Errors.InvalidGrant,
+                            [OpenIddictServerAspNetCoreConstants.Properties.ErrorDescription] =
+                                "The token is no longer valid."
+                        }));
+                }
+
+                var principal = result.Principal;
+
+                // عربي: تأكد أن المستخدم ما زال موجوداً
+                // English: Ensure the user still exists
+                var userId = principal.FindFirstValue(OpenIddictConstants.Claims.Subject)
+                             ?? principal.FindFirstValue(ClaimTypes.NameIdentifier);
+
+                if (string.IsNullOrWhiteSpace(userId))
+                {
+                    return Results.Forbid(
+                        authenticationSchemes: new[]
+                        {
+                            OpenIddictServerAspNetCoreDefaults.AuthenticationScheme
+                        },
+                        properties: new AuthenticationProperties(new Dictionary<string, string?>
+                        {
+                          [OpenIddictServerAspNetCoreConstants.Properties.Error] = OpenIddictConstants.Errors.InvalidGrant,
+                          [OpenIddictServerAspNetCoreConstants.Properties.ErrorDescription] =
+                                "The token subject is missing."
+                        }));
+                }
+
+                var user = await userManager.FindByIdAsync(userId);
+                if (user is null)
+                {
+                    return Results.Forbid(
+                        authenticationSchemes: new[]
+                        {
+                            OpenIddictServerAspNetCoreDefaults.AuthenticationScheme
+                        },
+                        properties: new AuthenticationProperties(new Dictionary<string, string?>
+                        {
+                          [OpenIddictServerAspNetCoreConstants.Properties.Error] = OpenIddictConstants.Errors.InvalidGrant,
+                          [OpenIddictServerAspNetCoreConstants.Properties.ErrorDescription] =
+                                "The user associated with the token no longer exists."
+                        }));
+                }
+
+                // عربي: إعادة إصدار التوكن بنفس الـ principal
+                // English: Re-issue tokens using the same principal
+                return Results.SignIn(
+                    principal,
+                    authenticationScheme: OpenIddictServerAspNetCoreDefaults.AuthenticationScheme);
+            }
+
+            // =========================================================
+            // 2) Machine-to-Machine / Client Credentials
+            // =========================================================
+            if (request.IsClientCredentialsGrantType())
+            {
+                // عربي: OpenIddict يتحقق تلقائياً من client_id و client_secret
+                // English: OpenIddict automatically validates client_id and client_secret
+                var application = await applicationManager.FindByClientIdAsync(request.ClientId!);
+                if (application is null)
+                {
+                    return Results.BadRequest(new
+                    {
+                        error = "invalid_client",
+                        error_description = "The client application cannot be found."
+                    });
+                }
+
+                // عربي: إنشاء هوية خاصة بالتطبيق نفسه وليس بمستخدم
+                // English: Create an identity for the client application itself
+                var identity = new ClaimsIdentity(
+                    OpenIddictServerAspNetCoreDefaults.AuthenticationScheme);
+
+                identity.AddClaim(OpenIddictConstants.Claims.Subject, request.ClientId!);
+
+                var displayName = await applicationManager.GetDisplayNameAsync(application);
+                if (!string.IsNullOrWhiteSpace(displayName))
+                {
+                    identity.AddClaim(OpenIddictConstants.Claims.Name, displayName);
+                }
+
+                identity.AddClaim("azp", request.ClientId!);
+                identity.AddClaim("client_id", request.ClientId!);
+
+                var principal = new ClaimsPrincipal(identity);
+
+                // عربي: تمرير السكوبات المطلوبة
+                // English: Assign the requested scopes
+                principal.SetScopes(request.GetScopes());
+
+                // عربي: جلب الـ audiences المسموحة لهذا العميل إن وجدت
+                // English: Load allowed audiences for this client if any
+                var allow = await db.AllowedAudiences
+                    .AsNoTracking()
+                    .Where(x => x.IsActive && x.ClientId == request.ClientId)
+                    .OrderByDescending(x => x.CreatedAtUtc)
+                    .ToListAsync();
+
+                var audiences = allow
+                    .Where(x => !string.IsNullOrWhiteSpace(x.Audience))
+                    .Select(x => x.Audience!)
+                    .Distinct(StringComparer.OrdinalIgnoreCase)
+                    .ToList();
+
+                if (audiences.Count > 0)
+                {
+                    principal.SetAudiences(audiences);
+                }
+
+                // عربي: تحديد أن هذه الـ claims تذهب إلى access token فقط
+                // English: Send these claims to the access token only
+                principal.SetDestinations(claim => claim.Type switch
+                {
+                    OpenIddictConstants.Claims.Subject => new[]
+                    {
+                        OpenIddictConstants.Destinations.AccessToken
+                    },
+
+                    OpenIddictConstants.Claims.Name => new[]
+                    {
+                        OpenIddictConstants.Destinations.AccessToken
+                    },
+
+                    "azp" => new[]
+                    {
+                        OpenIddictConstants.Destinations.AccessToken
+                    },
+
+                    "client_id" => new[]
+                    {
+                        OpenIddictConstants.Destinations.AccessToken
+                    },
+
+                    _ => new[]
+                    {
+                        OpenIddictConstants.Destinations.AccessToken
+                    }
+                });
+
+                // عربي: إصدار access token للـ machine client
+                // English: Issue an access token for the machine client
+                return Results.SignIn(
+                    principal,
+                    authenticationScheme: OpenIddictServerAspNetCoreDefaults.AuthenticationScheme);
+            }
+
+            // =========================================================
+            // 3) Unsupported grant type
+            // =========================================================
+            return Results.BadRequest(new
+            {
+                error = "unsupported_grant_type",
+                error_description = "The specified grant_type is not supported."
+            });
+        }).AllowAnonymous();
 
 
         // =========================

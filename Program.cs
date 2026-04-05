@@ -195,6 +195,8 @@ builder.Services.AddOpenIddict()
         .SetIntrospectionEndpointUris("/connect/introspect")
         .SetEndSessionEndpointUris("/connect/logout"); // ✅ أضف هذا
 
+    
+    options.AllowClientCredentialsFlow();
     // Flows
     options
         .AllowAuthorizationCodeFlow()
@@ -209,6 +211,7 @@ builder.Services.AddOpenIddict()
         "local_app_api",
         "GApplication",
         "WebApplication",
+        "store.products.read",
         "gold_app"
     );
 
@@ -219,8 +222,9 @@ builder.Services.AddOpenIddict()
 
     // ASP.NET Core integration
     options.UseAspNetCore()
-           .EnableAuthorizationEndpointPassthrough()
-           .EnableEndSessionEndpointPassthrough(); // ✅ أضف هذا
+        .EnableAuthorizationEndpointPassthrough()
+        .EnableTokenEndpointPassthrough()
+        .EnableEndSessionEndpointPassthrough(); // ✅ أضف هذا
 
     // Reference tokens (opaque)
     options.UseReferenceAccessTokens();

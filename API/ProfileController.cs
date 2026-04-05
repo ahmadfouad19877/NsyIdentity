@@ -12,7 +12,6 @@ namespace IdentityServerNSY.API
 {
     [Route("api")]
     [ApiController]
-    
     [Authorize]
     public class ProfileController : ControllerBase
     {
